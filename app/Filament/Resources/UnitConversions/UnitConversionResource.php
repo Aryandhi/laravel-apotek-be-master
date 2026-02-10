@@ -20,7 +20,7 @@ class UnitConversionResource extends Resource
 {
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('units.view') ?? false;
+        return false; // Menyembunyikan sub menu Konversi Satuan dari sidebar
     }
 
     public static function canCreate(): bool

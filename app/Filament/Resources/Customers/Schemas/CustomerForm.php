@@ -54,17 +54,17 @@ class CustomerForm
                             ]),
                     ]),
 
-                Section::make('Poin Member')
-                    ->description('Poin dapat digunakan untuk redeem hadiah atau diskon')
-                    ->schema([
-                        TextInput::make('points')
-                            ->label('Jumlah Poin')
-                            ->numeric()
-                            ->default(0)
-                            ->minValue(0)
-                            ->helperText('Poin terakumulasi dari setiap transaksi pembelian'),
-                    ])
-                    ->collapsed(),
+                // Section::make('Poin Member')
+                //     ->description('Poin dapat digunakan untuk redeem hadiah atau diskon')
+                //     ->schema([
+                //         TextInput::make('points')
+                //             ->label('Jumlah Poin')
+                //             ->numeric()
+                //             ->default(0)
+                //             ->minValue(0)
+                //             ->helperText('Poin terakumulasi dari setiap transaksi pembelian'),
+                //     ])
+                //     ->collapsed(),
             ]);
     }
 }

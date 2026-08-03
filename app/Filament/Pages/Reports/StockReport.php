@@ -125,6 +125,12 @@ class StockReport extends BaseReport
                 ->money('IDR')
                 ->alignEnd(),
 
+            TextColumn::make('margin_percentage')
+                ->label('Margin %')
+                ->suffix('%')
+                ->alignEnd()
+                ->sortable(),
+
             TextColumn::make('selling_price')
                 ->label('Harga Jual')
                 ->money('IDR')
@@ -166,6 +172,7 @@ class StockReport extends BaseReport
             'Stok',
             'Satuan',
             'Harga Beli',
+            'Margin %',
             'Harga Jual',
             'Nilai Stok',
             'Status',
@@ -183,6 +190,7 @@ class StockReport extends BaseReport
             $record->stock,
             $record->product?->baseUnit?->name ?? '-',
             $record->purchase_price,
+            $record->margin_percentage,
             $record->selling_price,
             $record->stock * $record->purchase_price,
             $record->status->value,

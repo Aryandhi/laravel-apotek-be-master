@@ -91,7 +91,7 @@ class PurchaseForm
                                                     $product = Product::find($state);
                                                     if ($product) {
                                                         $set('purchase_price', $product->purchase_price);
-                                                        $set('selling_price', $product->selling_price);
+                                                        $set('margin_percentage', 0);
                                                         $set('unit_id', $product->base_unit_id);
                                                         self::calculateItemTotal($set, $get);
                                                     }
@@ -142,12 +142,23 @@ class PurchaseForm
                                             ->native(false)
                                             ->displayFormat('d M Y')
                                             ->minDate(now()),
+                                        TextInput::make('margin_percentage')
+                                            ->label('Margin %')
+                                            ->numeric()
+                                            ->required()
+                                            ->default(0)
+                                            ->reactive()
+                                            ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
+                                            ->suffix('%')
+                                            ->minValue(0),
                                         TextInput::make('selling_price')
                                             ->label('Harga Jual')
                                             ->numeric()
-                                            ->prefix('Rp')
                                             ->default(0)
-                                            ->helperText('Harga jual untuk batch ini'),
+                                            ->disabled()
+                                            ->dehydrated()
+                                            ->prefix('Rp')
+                                            ->helperText('Harga jual dihitung otomatis dari harga beli dan margin'),
                                         TextInput::make('discount')
                                             ->label('Diskon')
                                             ->numeric()
@@ -257,11 +268,15 @@ class PurchaseForm
     {
         $quantity = floatval($get('quantity') ?? 0);
         $price = floatval($get('purchase_price') ?? 0);
+        $margin = floatval($get('margin_percentage') ?? 0);
         $discount = floatval($get('discount') ?? 0);
+
+        $sellingPrice = $price * (1 + ($margin / 100));
 
         $subtotal = $quantity * $price;
         $total = $subtotal - $discount;
 
+        $set('selling_price', round($sellingPrice, 2));
         $set('subtotal', $subtotal);
         $set('total', max(0, $total));
     }

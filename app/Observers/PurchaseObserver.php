@@ -68,12 +68,20 @@ class PurchaseObserver
             $batchNumber = $item->batch_number ?: 'BTH-'.now()->format('Ymd').'-'.$item->id;
             $expiredDate = $item->expired_date ?: now()->addYears(2);
 
+            $sellingPrice = floatval($item->selling_price ?? 0);
+            $marginPercentage = floatval($item->margin_percentage ?? 0);
+
+            if ($sellingPrice <= 0) {
+                $sellingPrice = $item->purchase_price * (1 + ($marginPercentage / 100));
+            }
+
             $batch = ProductBatch::create([
                 'product_id' => $item->product_id,
                 'batch_number' => $batchNumber,
                 'expired_date' => $expiredDate,
                 'purchase_price' => $item->purchase_price,
-                'selling_price' => $item->selling_price ?: $item->product->selling_price,
+                'margin_percentage' => $marginPercentage,
+                'selling_price' => round($sellingPrice, 2),
                 'stock' => $remainingQty,
                 'initial_stock' => $remainingQty,
                 'supplier_id' => $purchase->supplier_id,

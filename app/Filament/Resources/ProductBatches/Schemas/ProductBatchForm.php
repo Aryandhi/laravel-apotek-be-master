@@ -9,6 +9,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductBatchForm
@@ -59,15 +61,31 @@ class ProductBatchForm
                                     ->required()
                                     ->numeric()
                                     ->default(0)
+                                    ->reactive()
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::updateSellingPrice($set, $get))
                                     ->prefix('Rp')
                                     ->minValue(0),
-                                TextInput::make('selling_price')
-                                    ->label('Harga Jual')
+                                TextInput::make('margin_percentage')
+                                    ->label('Margin %')
                                     ->required()
                                     ->numeric()
                                     ->default(0)
-                                    ->prefix('Rp')
+                                    ->reactive()
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::updateSellingPrice($set, $get))
+                                    ->suffix('%')
                                     ->minValue(0),
+                            ]),
+                        Grid::make(1)
+                            ->schema([
+                                TextInput::make('selling_price')
+                                    ->label('Harga Jual')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->prefix('Rp')
+                                    ->minValue(0)
+                                    ->helperText('Harga jual dihitung otomatis dari harga beli dan margin'),
                             ]),
                     ]),
 
@@ -121,5 +139,15 @@ class ProductBatchForm
                     ->collapsible()
                     ->collapsed(),
             ]);
+    }
+
+    private static function updateSellingPrice(Set $set, Get $get): void
+    {
+        $purchasePrice = floatval($get('purchase_price') ?? 0);
+        $margin = floatval($get('margin_percentage') ?? 0);
+
+        $sellingPrice = $purchasePrice * (1 + ($margin / 100));
+
+        $set('selling_price', round($sellingPrice, 2));
     }
 }

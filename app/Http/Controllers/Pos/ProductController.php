@@ -93,6 +93,7 @@ class ProductController extends Controller
                 'expired_date' => $batch->expired_date->format('d M Y'),
                 'days_until_expired' => $batch->daysUntilExpired(),
                 'stock' => $batch->stock,
+                'margin_percentage' => $batch->margin_percentage,
                 'selling_price' => $batch->selling_price,
             ]),
             'unit_conversions' => $product->unitConversions->map(fn ($conv) => [
@@ -133,6 +134,7 @@ class ProductController extends Controller
                 'batch_number' => $batch->batch_number,
                 'expired_date' => $batch->expired_date->format('d M Y'),
                 'stock' => $batch->stock,
+                'margin_percentage' => $batch->margin_percentage,
                 'selling_price' => $batch->selling_price,
             ]),
         ]);

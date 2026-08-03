@@ -57,6 +57,11 @@ class ProductBatchesTable
                     ->money('IDR')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('margin_percentage')
+                    ->label('Margin %')
+                    ->suffix('%')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('selling_price')
                     ->label('Harga Jual')
                     ->money('IDR')

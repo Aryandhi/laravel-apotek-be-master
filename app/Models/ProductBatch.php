@@ -17,6 +17,7 @@ class ProductBatch extends Model
         'batch_number',
         'expired_date',
         'purchase_price',
+        'margin_percentage',
         'selling_price',
         'stock',
         'initial_stock',
@@ -30,6 +31,7 @@ class ProductBatch extends Model
         return [
             'expired_date' => 'date',
             'purchase_price' => 'decimal:2',
+            'margin_percentage' => 'decimal:2',
             'selling_price' => 'decimal:2',
             'stock' => 'integer',
             'initial_stock' => 'integer',

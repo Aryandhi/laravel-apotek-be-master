@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'show_api_docs' => env('SHOW_API_DOCS', false),
+    'show_tech_stack' => env('SHOW_TECH_STACK', false),
+    'show_pricing' => env('SHOW_PRICING', false),
+
 ];

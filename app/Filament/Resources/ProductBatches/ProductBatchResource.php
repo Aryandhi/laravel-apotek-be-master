@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -61,6 +62,13 @@ class ProductBatchResource extends Resource
     public static function table(Table $table): Table
     {
         return ProductBatchesTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        ProductBatch::syncExpiryStatuses();
+
+        return parent::getEloquentQuery();
     }
 
     public static function getRelations(): array

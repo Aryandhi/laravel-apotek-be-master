@@ -12,6 +12,13 @@ class ProductBatch extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saving(function (ProductBatch $productBatch): void {
+            $productBatch->syncStatusFromExpiryDate();
+        });
+    }
+
     protected $fillable = [
         'product_id',
         'batch_number',
@@ -79,6 +86,63 @@ class ProductBatch extends Model
     public function daysUntilExpired(): int
     {
         return max(0, $this->expired_date->diffInDays(now(), false) * -1);
+    }
+
+    public function syncStatusFromExpiryDate(): void
+    {
+        $status = $this->status instanceof BatchStatus ? $this->status : ($this->status ? BatchStatus::from($this->status) : null);
+
+        if (in_array($status, [BatchStatus::Returned, BatchStatus::Damaged], true)) {
+            return;
+        }
+
+        $today = now()->startOfDay();
+        $nearExpiredDays = (int) Setting::get('near_expired_days', 90);
+
+        if ($this->expired_date->lt($today)) {
+            $this->status = BatchStatus::Expired;
+
+            return;
+        }
+
+        if ($this->expired_date->lte($today->copy()->addDays($nearExpiredDays))) {
+            $this->status = BatchStatus::NearExpired;
+
+            return;
+        }
+
+        $this->status = BatchStatus::Active;
+    }
+
+    public static function syncExpiryStatuses(?int $nearExpiredDays = null): array
+    {
+        $nearExpiredDays ??= (int) Setting::get('near_expired_days', 90);
+
+        $today = now()->startOfDay();
+        $nearExpiredLimit = $today->copy()->addDays($nearExpiredDays);
+
+        $expiredCount = static::query()
+            ->whereNotIn('status', [BatchStatus::Returned, BatchStatus::Damaged])
+            ->where('expired_date', '<', $today)
+            ->update(['status' => BatchStatus::Expired]);
+
+        $nearExpiredCount = static::query()
+            ->whereNotIn('status', [BatchStatus::Returned, BatchStatus::Damaged])
+            ->where('expired_date', '>=', $today)
+            ->where('expired_date', '<=', $nearExpiredLimit)
+            ->update(['status' => BatchStatus::NearExpired]);
+
+        $activeCount = static::query()
+            ->whereNotIn('status', [BatchStatus::Returned, BatchStatus::Damaged])
+            ->where('expired_date', '>', $nearExpiredLimit)
+            ->update(['status' => BatchStatus::Active]);
+
+        return [
+            'expired' => $expiredCount,
+            'near_expired' => $nearExpiredCount,
+            'active' => $activeCount,
+            'total_updated' => $expiredCount + $nearExpiredCount + $activeCount,
+        ];
     }
 
     public function scopeActive($query)

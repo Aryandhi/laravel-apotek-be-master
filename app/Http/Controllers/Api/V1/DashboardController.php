@@ -16,6 +16,8 @@ class DashboardController extends Controller
         $user = $request->user();
         $today = today();
 
+        ProductBatch::syncExpiryStatuses();
+
         $todaySales = Sale::whereDate('date', $today)
             ->where('status', 'completed')
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(total), 0) as total')
@@ -84,6 +86,8 @@ class DashboardController extends Controller
     public function expiringBatches(): JsonResponse
     {
         $today = today();
+
+        ProductBatch::syncExpiryStatuses();
 
         $batches = ProductBatch::with(['product.baseUnit'])
             ->whereIn('status', ['active', 'near_expired', 'expired'])

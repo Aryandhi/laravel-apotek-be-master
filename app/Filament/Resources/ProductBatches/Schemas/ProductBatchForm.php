@@ -42,8 +42,7 @@ class ProductBatchForm
                                     ->label('Tanggal Kadaluarsa')
                                     ->required()
                                     ->native(false)
-                                    ->displayFormat('d M Y')
-                                    ->minDate(now()),
+                                    ->displayFormat('d M Y'),
                                 Select::make('status')
                                     ->label('Status')
                                     ->options(BatchStatus::class)

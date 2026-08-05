@@ -58,6 +58,8 @@ class StockReport extends BaseReport
 
     protected function getReportQuery(): Builder
     {
+        ProductBatch::syncExpiryStatuses();
+
         return ProductBatch::query()
             ->with(['product', 'product.category', 'product.baseUnit', 'supplier'])
             ->when($this->stockFilter === 'low', function ($query) {
@@ -199,6 +201,8 @@ class StockReport extends BaseReport
 
     protected function getSummaryData(): array
     {
+        ProductBatch::syncExpiryStatuses();
+
         $query = ProductBatch::query()->where('stock', '>', 0);
 
         $totalValue = (clone $query)->selectRaw('SUM(stock * purchase_price) as total')->value('total') ?? 0;

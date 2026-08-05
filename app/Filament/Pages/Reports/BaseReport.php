@@ -137,6 +137,7 @@ abstract class BaseReport extends Page implements HasTable
             ->query($this->getReportQuery())
             ->columns($this->getReportColumns())
             ->defaultSort($this->getDefaultSort(), $this->getDefaultSortDirection())
+            ->defaultKeySort(false)
             ->striped()
             ->paginated([10, 25, 50, 100]);
     }

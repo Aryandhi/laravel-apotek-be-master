@@ -18,6 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use UnitEnum;
 
@@ -31,7 +32,9 @@ abstract class BaseReport extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('reports.view') ?? false;
+        $user = Auth::check() ? Auth::user() : null;
+
+        return $user instanceof \Illuminate\Contracts\Auth\Access\Authorizable && $user->can('reports.view');
     }
 
     public ?string $startDate = null;
@@ -227,7 +230,7 @@ abstract class BaseReport extends Page implements HasTable
         return "{$slug}-{$this->startDate}-{$this->endDate}.{$extension}";
     }
 
-    protected function getExportData(): Collection
+    public function getExportData(): Collection
     {
         return $this->getReportQuery()
             ->get()

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\StockOpnames\Schemas;
 
 use App\Enums\StockOpnameStatus;
+use App\Filament\Resources\StockOpnames\Pages\CreateStockOpname;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use Filament\Forms\Components\DatePicker;
@@ -11,7 +12,10 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class StockOpnameForm
 {
@@ -38,16 +42,82 @@ class StockOpnameForm
                     ->dehydrated(),
 
                 Hidden::make('user_id')
-                    ->default(fn () => auth()->id()),
+                    ->default(fn () => Auth::id()),
 
                 Textarea::make('notes')
                     ->label('Catatan')
                     ->rows(2)
                     ->columnSpanFull(),
 
+                Section::make('Filter & Progres')
+                    ->description('Gunakan filter untuk melihat item tertentu berdasarkan produk atau lokasi rak. Saat item baru ditambahkan, daftar pilihan akan otomatis diperbarui.')
+                    ->schema([
+                        Grid::make()
+                            ->schema([
+                                Select::make('product_filter')
+                                    ->label('Filter Nama Produk')
+                                    ->options(function (callable $get) {
+                                        $items = $get('items_source') ?? $get('items') ?? [];
+
+                                        return ['' => 'Semua Produk Terinput'] + CreateStockOpname::getAvailableProductOptionsForItems($items);
+                                    })
+                                    ->searchable()
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->placeholder('Semua Produk Terinput')
+                                    ->helperText('Pilih produk dari item stock opname yang sudah ada.')
+                                    ->default('')
+                                    ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                        $items = $get('items_source') ?? $get('items') ?? [];
+                                        $filteredItems = CreateStockOpname::getFilteredItemsForStockOpname($items, (int) $state, $get('rack_filter'));
+                                        $set('items', $filteredItems);
+                                    }),
+
+                                Select::make('rack_filter')
+                                    ->label('Filter Lokasi Rak')
+                                    ->options(function (callable $get) {
+                                        $items = $get('items_source') ?? $get('items') ?? [];
+
+                                        return ['' => 'Semua Lokasi Rak Terinput'] + CreateStockOpname::getAvailableRackLocationOptionsForItems($items);
+                                    })
+                                    ->searchable()
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->placeholder('Semua Lokasi Rak Terinput')
+                                    ->helperText('Pilih lokasi rak yang terkait dengan item stock opname.')
+                                    ->default('')
+                                    ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                        $items = $get('items_source') ?? $get('items') ?? [];
+                                        $filteredItems = CreateStockOpname::getFilteredItemsForStockOpname($items, (int) $get('product_filter'), $state);
+                                        $set('items', $filteredItems);
+                                    }),
+                            ])
+                            ->columns(2),
+
+                        Hidden::make('items_source')
+                            ->dehydrated(false)
+                            ->default([])
+                            ->afterStateHydrated(function ($state, callable $set, callable $get) {
+                                $items = $get('items') ?? [];
+                                $set('items_source', $items);
+                            }),
+                    ])
+                    ->columnSpanFull(),
+
                 Repeater::make('items')
                     ->relationship()
                     ->label('Item Stock Opname')
+                    ->afterStateHydrated(function ($state, callable $set) {
+                        $set('items_source', $state ?? []);
+                    })
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $set('items_source', $state ?? []);
+
+                        $productFilter = $get('product_filter');
+                        $rackFilter = $get('rack_filter');
+                        $filteredItems = CreateStockOpname::getFilteredItemsForStockOpname($state ?? [], (int) ($productFilter ?? 0), (string) ($rackFilter ?? ''));
+                        $set('items', $filteredItems);
+                    })
                     ->schema([
                         Select::make('product_id')
                             ->label('Produk')
@@ -55,11 +125,14 @@ class StockOpnameForm
                             ->searchable()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function ($state, callable $set) {
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                 $set('product_batch_id', null);
                                 $set('system_stock', 0);
                                 $set('physical_stock', 0);
                                 $set('difference', 0);
+
+                                $items = $get('../../items') ?? [];
+                                $set('../../items_source', $items);
                             }),
 
                         Select::make('product_batch_id')

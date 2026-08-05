@@ -6,6 +6,7 @@ use App\Http\Controllers\Pos\DashboardController;
 use App\Http\Controllers\Pos\ProductController;
 use App\Http\Controllers\Pos\ReceiptController;
 use App\Http\Controllers\Pos\SettingsController;
+use App\Http\Controllers\Reports\BatchProductPrintPreviewController;
 use App\Http\Controllers\Pos\ShiftController;
 use App\Http\Controllers\Pos\TransactionController;
 use App\Http\Controllers\Pos\XenditPaymentController;
@@ -15,6 +16,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('landing');
 });
+
+Route::get('/reports/batch-products/preview', [BatchProductPrintPreviewController::class, 'show'])
+    ->name('reports.batch-products.preview');
 
 // POS Routes
 Route::prefix('pos')->name('pos.')->group(function () {

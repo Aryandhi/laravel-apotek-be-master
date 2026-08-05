@@ -211,4 +211,12 @@ class ProfitLossReport extends BaseReport
             'Qty Terjual' => number_format($data->total_qty ?? 0),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'category_id' => 'categoryId',
+            'group_by' => 'groupBy',
+        ];
+    }
 }

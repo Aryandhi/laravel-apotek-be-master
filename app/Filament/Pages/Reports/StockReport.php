@@ -221,4 +221,12 @@ class StockReport extends BaseReport
             'Sudah Kadaluarsa' => number_format($expired),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'stock_filter' => 'stockFilter',
+            'category_id' => 'categoryId',
+        ];
+    }
 }

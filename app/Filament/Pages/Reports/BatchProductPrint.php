@@ -203,39 +203,22 @@ class BatchProductPrint extends BaseReport
         $pdf->setPaper('a4', 'landscape');
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
+            fn () => print ($pdf->output()),
             $filename
         );
     }
 
-    protected function getHeaderActions(): array
+    protected function getAdditionalPreviewFilterMap(): array
     {
-        $actions = parent::getHeaderActions();
-
-        return array_map(function ($action) {
-            if ($action->getName() === 'print') {
-                return $action
-                    ->url($this->getPreviewUrl())
-                    ->openUrlInNewTab();
-            }
-
-            return $action;
-        }, $actions);
+        return [
+            'product_id' => 'productId',
+            'rack_location' => 'rackLocation',
+        ];
     }
 
-    public function printReport()
+    protected function getPrintView(): string
     {
-        return redirect()->to($this->getPreviewUrl());
-    }
-
-    protected function getPreviewUrl(): string
-    {
-        $queryString = http_build_query([
-            'product_id' => $this->productId ?? '',
-            'rack_location' => $this->rackLocation ?? '',
-        ]);
-
-        return route('reports.batch-products.preview').($queryString ? '?'.$queryString : '');
+        return 'exports.batch-product-print';
     }
 
     protected function getDefaultSort(): string

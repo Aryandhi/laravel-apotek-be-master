@@ -180,4 +180,12 @@ class StockMovementReport extends BaseReport
             'Net' => number_format($totalIn + $totalOut),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'product_id' => 'productId',
+            'type' => 'type',
+        ];
+    }
 }

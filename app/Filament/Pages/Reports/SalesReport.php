@@ -173,4 +173,12 @@ class SalesReport extends BaseReport
             'Rata-rata/Transaksi' => $this->formatMoney($totalTransactions > 0 ? $totalSales / $totalTransactions : 0),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'status' => 'status',
+            'user_id' => 'userId',
+        ];
+    }
 }

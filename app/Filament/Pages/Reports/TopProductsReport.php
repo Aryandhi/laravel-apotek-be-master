@@ -218,4 +218,12 @@ class TopProductsReport extends BaseReport
             'Total Penjualan' => $this->formatMoney($data->total_sales ?? 0),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'category_id' => 'categoryId',
+            'sort_by' => 'sortBy',
+        ];
+    }
 }

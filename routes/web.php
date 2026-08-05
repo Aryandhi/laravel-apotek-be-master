@@ -6,10 +6,10 @@ use App\Http\Controllers\Pos\DashboardController;
 use App\Http\Controllers\Pos\ProductController;
 use App\Http\Controllers\Pos\ReceiptController;
 use App\Http\Controllers\Pos\SettingsController;
-use App\Http\Controllers\Reports\BatchProductPrintPreviewController;
 use App\Http\Controllers\Pos\ShiftController;
 use App\Http\Controllers\Pos\TransactionController;
 use App\Http\Controllers\Pos\XenditPaymentController;
+use App\Http\Controllers\Reports\ReportPreviewController;
 use App\Http\Middleware\EnsureUserCanAccessPos;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +17,21 @@ Route::get('/', function () {
     return view('landing');
 });
 
-Route::get('/reports/batch-products/preview', [BatchProductPrintPreviewController::class, 'show'])
-    ->name('reports.batch-products.preview');
+Route::middleware('auth')->group(function () {
+    Route::get('/reports/preview/{report}', [ReportPreviewController::class, 'showPage'])
+        ->name('reports.preview.page');
+
+    Route::get('/reports/preview/{report}/pdf', [ReportPreviewController::class, 'showPdf'])
+        ->name('reports.preview.pdf');
+
+    Route::get('/reports/batch-products/preview', function () {
+        return redirect()->route('reports.preview.page', [
+            'report' => 'batch-product-print',
+            'product_id' => request()->query('product_id', ''),
+            'rack_location' => request()->query('rack_location', ''),
+        ]);
+    })->name('reports.batch-products.preview');
+});
 
 // POS Routes
 Route::prefix('pos')->name('pos.')->group(function () {

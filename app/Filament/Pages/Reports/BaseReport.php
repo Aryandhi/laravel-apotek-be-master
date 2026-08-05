@@ -81,7 +81,8 @@ abstract class BaseReport extends Page implements HasTable
                 ->label('Print')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->action(fn () => $this->printReport()),
+                ->url(fn (): string => $this->getPreviewPageUrl())
+                ->openUrlInNewTab(),
         ];
     }
 
@@ -203,25 +204,123 @@ abstract class BaseReport extends Page implements HasTable
 
     public function printReport()
     {
-        $filename = $this->getExportFilename('pdf');
+        return redirect()->to($this->getPreviewPageUrl());
+    }
 
-        $pdf = Pdf::loadView('exports.report-print', [
+    public function getPreviewPageUrl(): string
+    {
+        return route('reports.preview.page', array_merge(
+            ['report' => $this->getPreviewReportKey()],
+            $this->getPreviewQueryParameters()
+        ));
+    }
+
+    public function getPreviewPdfUrl(bool $download = false): string
+    {
+        return route('reports.preview.pdf', array_merge(
+            ['report' => $this->getPreviewReportKey(), 'download' => $download ? '1' : '0'],
+            $this->getPreviewQueryParameters()
+        ));
+    }
+
+    public function applyPreviewFilters(array $queryParameters): void
+    {
+        foreach ($this->getPreviewFilterMap() as $queryKey => $propertyName) {
+            if (! array_key_exists($queryKey, $queryParameters)) {
+                continue;
+            }
+
+            $value = $queryParameters[$queryKey];
+
+            $this->{$propertyName} = is_scalar($value) ? (string) $value : null;
+        }
+    }
+
+    public function getPreviewPayload(): array
+    {
+        return [
             'title' => $this->getReportTitle(),
-            'period' => $this->startDate.' - '.$this->endDate,
+            'period' => $this->startDate && $this->endDate
+                ? $this->startDate.' - '.$this->endDate
+                : 'Semua data',
             'headings' => $this->getExportHeadings(),
             'data' => $this->getExportData(),
             'summary' => $this->getSummaryData(),
             'storeName' => config('app.name'),
             'printDate' => now()->format('d/m/Y H:i'),
-        ]);
+        ];
+    }
 
-        // Format untuk dot matrix (continuous paper)
-        $pdf->setPaper([0, 0, 612, 936], 'portrait'); // 8.5 x 13 inch
+    public function getPrintViewName(): string
+    {
+        return $this->getPrintView();
+    }
 
-        return response()->streamDownload(
-            fn () => print ($pdf->output()),
-            $filename
-        );
+    public function getPrintPaperSize(): array|string
+    {
+        return $this->getPrintPaperSizeConfig();
+    }
+
+    public function getPrintPaperOrientation(): string
+    {
+        return $this->getPrintPaperOrientationConfig();
+    }
+
+    public function getPrintPdfFilename(): string
+    {
+        return $this->getExportFilename('pdf');
+    }
+
+    public function getPreviewFilterMap(): array
+    {
+        return array_merge([
+            'start_date' => 'startDate',
+            'end_date' => 'endDate',
+        ], $this->getAdditionalPreviewFilterMap());
+    }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [];
+    }
+
+    protected function getPreviewQueryParameters(): array
+    {
+        $parameters = [];
+
+        foreach ($this->getPreviewFilterMap() as $queryKey => $propertyName) {
+            $value = $this->{$propertyName} ?? null;
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $parameters[$queryKey] = (string) $value;
+        }
+
+        return $parameters;
+    }
+
+    protected function getPreviewReportKey(): string
+    {
+        return (string) str(class_basename(static::class))
+            ->beforeLast('Report')
+            ->kebab();
+    }
+
+    protected function getPrintView(): string
+    {
+        return 'exports.report-print';
+    }
+
+    protected function getPrintPaperSizeConfig(): array|string
+    {
+        return [0, 0, 612, 936];
+    }
+
+    protected function getPrintPaperOrientationConfig(): string
+    {
+        return 'portrait';
     }
 
     protected function getExportFilename(string $extension): string

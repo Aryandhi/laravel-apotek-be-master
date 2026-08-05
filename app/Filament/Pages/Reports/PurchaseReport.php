@@ -215,4 +215,13 @@ class PurchaseReport extends BaseReport
             'Belum Lunas' => number_format($unpaidCount),
         ];
     }
+
+    protected function getAdditionalPreviewFilterMap(): array
+    {
+        return [
+            'supplier_id' => 'supplierId',
+            'status' => 'status',
+            'payment_status' => 'paymentStatus',
+        ];
+    }
 }

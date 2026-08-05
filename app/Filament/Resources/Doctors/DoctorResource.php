@@ -20,7 +20,7 @@ class DoctorResource extends Resource
 {
     public static function canAccess(): bool
     {
-        return false; // Menyembunyikan menu Doctor dari sidebar tanpa menghapus route
+        return auth()->user()?->can('doctors.view') ?? false; // Menyembunyikan menu Doctor dari sidebar tanpa menghapus route
     }
 
     public static function canCreate(): bool

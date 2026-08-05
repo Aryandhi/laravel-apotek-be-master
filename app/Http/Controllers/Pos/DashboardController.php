@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Pos;
 use App\Enums\SaleStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CashierShift;
-use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Sale;
+use App\Models\Setting;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +16,10 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
+        $today = now()->startOfDay();
+        $expiringLimit = $today->copy()->addDays(30);
+        $lowStockThreshold = (int) Setting::get('low_stock_threshold', 10);
+
         $user = Auth::user();
 
         $currentShift = CashierShift::query()
@@ -29,16 +33,6 @@ class DashboardController extends Controller
             ->where('status', SaleStatus::Completed)
             ->selectRaw('COUNT(*) as total_transactions, COALESCE(SUM(total), 0) as total_revenue')
             ->first();
-
-        // Current shift sales (if shift is open)
-        $shiftSales = null;
-        if ($currentShift) {
-            $shiftSales = Sale::query()
-                ->where('shift_id', $currentShift->id)
-                ->where('status', SaleStatus::Completed)
-                ->selectRaw('COUNT(*) as total_transactions, COALESCE(SUM(total), 0) as total_revenue')
-                ->first();
-        }
 
         // Payment breakdown for today
         $todayPayments = DB::table('sale_payments')
@@ -55,21 +49,7 @@ class DashboardController extends Controller
             ->orderByDesc('total_amount')
             ->get();
 
-        // Top selling products today
-        $topProducts = DB::table('sale_items')
-            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-            ->join('products', 'sale_items.product_id', '=', 'products.id')
-            ->whereDate('sales.date', today())
-            ->where('sales.status', SaleStatus::Completed->value)
-            ->select(
-                'products.name',
-                DB::raw('SUM(sale_items.quantity) as total_qty'),
-                DB::raw('SUM(sale_items.subtotal) as total_sales')
-            )
-            ->groupBy('products.id', 'products.name')
-            ->orderByDesc('total_qty')
-            ->limit(5)
-            ->get();
+        $todayPaymentTotal = (float) $todayPayments->sum('total_amount');
 
         // Recent transactions
         $recentSales = Sale::query()
@@ -80,25 +60,49 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $lowStockProducts = Product::query()
-            ->where('is_active', true)
-            ->whereRaw('(SELECT COALESCE(SUM(stock), 0) FROM product_batches WHERE product_batches.product_id = products.id AND product_batches.stock > 0) <= products.min_stock')
+        $lowStockProducts = ProductBatch::query()
+            ->where('stock', '>', 0)
+            ->where('stock', '<', $lowStockThreshold)
+            ->whereHas('product', function ($query): void {
+                $query->where('is_active', true);
+            })
             ->count();
+
+        $lowStockItems = ProductBatch::query()
+            ->with(['product:id,name,min_stock'])
+            ->where('stock', '>', 0)
+            ->where('stock', '<', $lowStockThreshold)
+            ->whereHas('product', function ($query): void {
+                $query->where('is_active', true);
+            })
+            ->orderBy('expired_date')
+            ->limit(20)
+            ->get();
 
         $expiringBatches = ProductBatch::query()
             ->where('stock', '>', 0)
-            ->whereBetween('expired_date', [now(), now()->addDays(30)])
+            ->whereBetween('expired_date', [$today, $expiringLimit])
             ->count();
+
+        $expiringBatchItems = ProductBatch::query()
+            ->with('product:id,name')
+            ->where('stock', '>', 0)
+            ->whereBetween('expired_date', [$today, $expiringLimit])
+            ->orderBy('expired_date')
+            ->limit(20)
+            ->get();
 
         return view('pos.dashboard', compact(
             'currentShift',
             'todaySales',
-            'shiftSales',
             'todayPayments',
-            'topProducts',
+            'todayPaymentTotal',
+            'lowStockThreshold',
             'recentSales',
             'lowStockProducts',
-            'expiringBatches'
+            'lowStockItems',
+            'expiringBatches',
+            'expiringBatchItems'
         ));
     }
 }

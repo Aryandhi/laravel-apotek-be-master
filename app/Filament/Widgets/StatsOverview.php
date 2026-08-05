@@ -3,7 +3,6 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Product;
-use App\Models\ProductBatch;
 use App\Models\Sale;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -39,17 +38,6 @@ class StatsOverview extends StatsOverviewWidget
         // Produk
         $totalProducts = Product::where('is_active', true)->count();
 
-        // Stok menipis (< 10)
-        $lowStock = ProductBatch::where('stock', '>', 0)
-            ->where('stock', '<', 10)
-            ->count();
-
-        // Kadaluarsa dalam 30 hari
-        $expiringSoon = ProductBatch::where('stock', '>', 0)
-            ->where('expired_date', '<=', now()->addDays(30))
-            ->where('expired_date', '>', now())
-            ->count();
-
         return [
             Stat::make('Penjualan Hari Ini', 'Rp '.Number::format($todaySales, 0, null, 'id'))
                 ->description($todayTransactions.' transaksi')
@@ -65,16 +53,6 @@ class StatsOverview extends StatsOverviewWidget
                 ->description('Produk tersedia')
                 ->descriptionIcon('heroicon-m-cube')
                 ->color('info'),
-
-            Stat::make('Stok Menipis', Number::format($lowStock, 0))
-                ->description('Perlu restok segera')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
-                ->color($lowStock > 0 ? 'warning' : 'success'),
-
-            Stat::make('Kadaluarsa < 30 Hari', Number::format($expiringSoon, 0))
-                ->description('Segera jual/retur')
-                ->descriptionIcon('heroicon-m-clock')
-                ->color($expiringSoon > 0 ? 'danger' : 'success'),
 
             Stat::make('Transaksi Bulan Ini', Number::format($monthTransactions, 0))
                 ->description('Total transaksi')

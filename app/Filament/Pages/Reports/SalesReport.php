@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Enums\SaleStatus;
+use App\Models\PaymentMethod;
 use App\Models\Sale;
 use App\Models\User;
 use BackedEnum;
@@ -24,6 +25,8 @@ class SalesReport extends BaseReport
     public ?string $status = '';
 
     public ?string $userId = '';
+
+    public ?string $paymentMethodId = '';
 
     protected function getReportTitle(): string
     {
@@ -52,19 +55,32 @@ class SalesReport extends BaseReport
                 ->searchable()
                 ->live()
                 ->afterStateUpdated(fn () => $this->resetTable()),
+
+            Select::make('paymentMethodId')
+                ->label('Metode Pembayaran')
+                ->options(fn () => ['' => 'Semua Metode'] + PaymentMethod::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                ->default('')
+                ->searchable()
+                ->live()
+                ->afterStateUpdated(fn () => $this->resetTable()),
         ];
     }
 
     protected function getReportQuery(): Builder
     {
         return Sale::query()
-            ->with(['customer', 'user', 'items'])
+            ->with(['customer', 'user', 'items', 'payments.paymentMethod'])
             ->whereBetween('date', [$this->startDate, $this->endDate])
             ->when($this->status, function ($query) {
                 $query->where('status', $this->status);
             })
             ->when($this->userId, function ($query) {
                 $query->where('user_id', $this->userId);
+            })
+            ->when($this->paymentMethodId, function ($query) {
+                $query->whereHas('payments', function ($paymentQuery) {
+                    $paymentQuery->where('payment_method_id', $this->paymentMethodId);
+                });
             });
     }
 
@@ -85,6 +101,15 @@ class SalesReport extends BaseReport
                 ->label('Pelanggan')
                 ->default('-')
                 ->searchable(),
+
+            TextColumn::make('payment_method_names')
+                ->label('Metode Pembayaran')
+                ->getStateUsing(fn (Sale $record): string => $record->payments
+                    ->pluck('paymentMethod.name')
+                    ->filter()
+                    ->unique()
+                    ->implode(', ') ?: '-')
+                ->wrap(),
 
             TextColumn::make('items_count')
                 ->label('Items')
@@ -134,6 +159,7 @@ class SalesReport extends BaseReport
             'No. Invoice',
             'Tanggal',
             'Pelanggan',
+            'Metode Pembayaran',
             'Jumlah Item',
             'Subtotal',
             'Diskon',
@@ -149,6 +175,7 @@ class SalesReport extends BaseReport
             $record->invoice_number,
             $this->formatDate($record->date),
             $record->customer?->name ?? '-',
+            $record->payments->pluck('paymentMethod.name')->filter()->unique()->implode(', ') ?: '-',
             $record->items->count(),
             $record->subtotal,
             $record->discount,
@@ -179,6 +206,7 @@ class SalesReport extends BaseReport
         return [
             'status' => 'status',
             'user_id' => 'userId',
+            'payment_method_id' => 'paymentMethodId',
         ];
     }
 }

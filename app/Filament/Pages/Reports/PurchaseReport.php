@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Enums\PurchaseStatus;
+use App\Models\PaymentMethod;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use BackedEnum;
@@ -26,6 +27,8 @@ class PurchaseReport extends BaseReport
     public ?string $supplierId = '';
 
     public ?string $paymentStatus = '';
+
+    public ?string $paymentMethodId = '';
 
     protected function getReportTitle(): string
     {
@@ -66,13 +69,21 @@ class PurchaseReport extends BaseReport
                 ->default('')
                 ->live()
                 ->afterStateUpdated(fn () => $this->resetTable()),
+
+            Select::make('paymentMethodId')
+                ->label('Metode Pembayaran')
+                ->options(fn () => ['' => 'Semua Metode'] + PaymentMethod::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                ->default('')
+                ->searchable()
+                ->live()
+                ->afterStateUpdated(fn () => $this->resetTable()),
         ];
     }
 
     protected function getReportQuery(): Builder
     {
         return Purchase::query()
-            ->with(['supplier', 'user', 'items'])
+            ->with(['supplier', 'user', 'items', 'payments.paymentMethod'])
             ->whereBetween('date', [$this->startDate, $this->endDate])
             ->when($this->supplierId, function ($query) {
                 $query->where('supplier_id', $this->supplierId);
@@ -85,6 +96,11 @@ class PurchaseReport extends BaseReport
             })
             ->when($this->paymentStatus === 'unpaid', function ($query) {
                 $query->whereColumn('paid_amount', '<', 'total');
+            })
+            ->when($this->paymentMethodId, function ($query) {
+                $query->whereHas('payments', function ($paymentQuery) {
+                    $paymentQuery->where('payment_method_id', $this->paymentMethodId);
+                });
             });
     }
 
@@ -105,6 +121,15 @@ class PurchaseReport extends BaseReport
                 ->label('Supplier')
                 ->searchable()
                 ->sortable(),
+
+            TextColumn::make('payment_method_names')
+                ->label('Metode Pembayaran')
+                ->getStateUsing(fn (Purchase $record): string => $record->payments
+                    ->pluck('paymentMethod.name')
+                    ->filter()
+                    ->unique()
+                    ->implode(', ') ?: '-')
+                ->wrap(),
 
             TextColumn::make('items_count')
                 ->label('Items')
@@ -170,6 +195,7 @@ class PurchaseReport extends BaseReport
             'No. Invoice',
             'Tanggal',
             'Supplier',
+            'Metode Pembayaran',
             'Jumlah Item',
             'Subtotal',
             'Diskon',
@@ -187,6 +213,7 @@ class PurchaseReport extends BaseReport
             $record->invoice_number,
             $this->formatDate($record->date),
             $record->supplier?->name ?? '-',
+            $record->payments->pluck('paymentMethod.name')->filter()->unique()->implode(', ') ?: '-',
             $record->items->count(),
             $record->subtotal,
             $record->discount,
@@ -222,6 +249,7 @@ class PurchaseReport extends BaseReport
             'supplier_id' => 'supplierId',
             'status' => 'status',
             'payment_status' => 'paymentStatus',
+            'payment_method_id' => 'paymentMethodId',
         ];
     }
 }

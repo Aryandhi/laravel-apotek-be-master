@@ -51,10 +51,22 @@ abstract class BaseReport extends Page implements HasTable
 
     abstract protected function getExportRow($record): array;
 
+    protected function usesDateRangeFilter(): bool
+    {
+        return true;
+    }
+
     public function mount(): void
     {
-        $this->startDate = now()->startOfMonth()->format('Y-m-d');
-        $this->endDate = now()->format('Y-m-d');
+        if ($this->usesDateRangeFilter()) {
+            $this->startDate = now()->startOfMonth()->format('Y-m-d');
+            $this->endDate = now()->format('Y-m-d');
+
+            return;
+        }
+
+        $this->startDate = null;
+        $this->endDate = null;
     }
 
     public function getTitle(): string|Htmlable
@@ -93,26 +105,33 @@ abstract class BaseReport extends Page implements HasTable
 
     public function content(Schema $schema): Schema
     {
+        $filters = [];
+
+        if ($this->usesDateRangeFilter()) {
+            $filters[] = DatePicker::make('startDate')
+                ->label('Dari Tanggal')
+                ->default(now()->startOfMonth())
+                ->native(false)
+                ->displayFormat('d M Y')
+                ->live()
+                ->afterStateUpdated(fn () => $this->resetTable());
+
+            $filters[] = DatePicker::make('endDate')
+                ->label('Sampai Tanggal')
+                ->default(now())
+                ->native(false)
+                ->displayFormat('d M Y')
+                ->live()
+                ->afterStateUpdated(fn () => $this->resetTable());
+        }
+
         return $schema
             ->components([
                 Section::make('Filter')
                     ->schema([
                         Grid::make()
                             ->schema([
-                                DatePicker::make('startDate')
-                                    ->label('Dari Tanggal')
-                                    ->default(now()->startOfMonth())
-                                    ->native(false)
-                                    ->displayFormat('d M Y')
-                                    ->live()
-                                    ->afterStateUpdated(fn () => $this->resetTable()),
-                                DatePicker::make('endDate')
-                                    ->label('Sampai Tanggal')
-                                    ->default(now())
-                                    ->native(false)
-                                    ->displayFormat('d M Y')
-                                    ->live()
-                                    ->afterStateUpdated(fn () => $this->resetTable()),
+                                ...$filters,
                                 ...$this->getAdditionalFilters(),
                             ])
                             ->columns([
@@ -186,9 +205,13 @@ abstract class BaseReport extends Page implements HasTable
     {
         $filename = $this->getExportFilename('pdf');
 
+        $period = $this->startDate && $this->endDate
+            ? $this->startDate.' - '.$this->endDate
+            : 'Semua data';
+
         $pdf = Pdf::loadView('exports.report-pdf', [
             'title' => $this->getReportTitle(),
-            'period' => $this->startDate.' - '.$this->endDate,
+            'period' => $period,
             'headings' => $this->getExportHeadings(),
             'data' => $this->getExportData(),
             'summary' => $this->getSummaryData(),
@@ -273,10 +296,16 @@ abstract class BaseReport extends Page implements HasTable
 
     public function getPreviewFilterMap(): array
     {
-        return array_merge([
-            'start_date' => 'startDate',
-            'end_date' => 'endDate',
-        ], $this->getAdditionalPreviewFilterMap());
+        $filters = $this->getAdditionalPreviewFilterMap();
+
+        if ($this->usesDateRangeFilter()) {
+            return array_merge([
+                'start_date' => 'startDate',
+                'end_date' => 'endDate',
+            ], $filters);
+        }
+
+        return $filters;
     }
 
     protected function getAdditionalPreviewFilterMap(): array
@@ -327,7 +356,11 @@ abstract class BaseReport extends Page implements HasTable
     {
         $slug = str($this->getReportTitle())->slug();
 
-        return "{$slug}-{$this->startDate}-{$this->endDate}.{$extension}";
+        if ($this->startDate && $this->endDate) {
+            return "{$slug}-{$this->startDate}-{$this->endDate}.{$extension}";
+        }
+
+        return "{$slug}-".now()->format('Y-m-d').".{$extension}";
     }
 
     public function getExportData(): Collection

@@ -25,9 +25,16 @@ class StockReport extends BaseReport
 
     public ?string $categoryId = '';
 
+    public ?string $batchStatus = '';
+
     protected function getReportTitle(): string
     {
         return 'Laporan Stok';
+    }
+
+    protected function usesDateRangeFilter(): bool
+    {
+        return false;
     }
 
     protected function getAdditionalFilters(): array
@@ -51,6 +58,20 @@ class StockReport extends BaseReport
                 ->options(fn () => ['' => 'Semua Kategori'] + Category::pluck('name', 'id')->toArray())
                 ->default('')
                 ->searchable()
+                ->live()
+                ->afterStateUpdated(fn () => $this->resetTable()),
+
+            Select::make('batchStatus')
+                ->label('Status Batch Produk')
+                ->options([
+                    '' => 'Semua Status Batch',
+                    BatchStatus::Active->value => 'Aktif',
+                    BatchStatus::NearExpired->value => 'Hampir Kadaluarsa',
+                    BatchStatus::Expired->value => 'Sudah Kadaluarsa',
+                    BatchStatus::Returned->value => 'Dikembalikan',
+                    BatchStatus::Damaged->value => 'Rusak',
+                ])
+                ->default('')
                 ->live()
                 ->afterStateUpdated(fn () => $this->resetTable()),
         ];
@@ -82,6 +103,9 @@ class StockReport extends BaseReport
                 $query->whereHas('product', function ($q) {
                     $q->where('category_id', $this->categoryId);
                 });
+            })
+            ->when($this->batchStatus, function ($query) {
+                $query->where('status', $this->batchStatus);
             });
     }
 
@@ -201,16 +225,14 @@ class StockReport extends BaseReport
 
     protected function getSummaryData(): array
     {
-        ProductBatch::syncExpiryStatuses();
-
-        $query = ProductBatch::query()->where('stock', '>', 0);
+        $query = $this->getReportQuery();
 
         $totalValue = (clone $query)->selectRaw('SUM(stock * purchase_price) as total')->value('total') ?? 0;
         $totalItems = (clone $query)->sum('stock');
         $totalBatches = (clone $query)->count();
-        $lowStock = (clone $query)->where('stock', '<', 10)->count();
-        $expiring = (clone $query)->whereBetween('expired_date', [now(), now()->addDays(30)])->count();
-        $expired = ProductBatch::where('expired_date', '<', now())->where('stock', '>', 0)->count();
+        $lowStock = (clone $query)->where('stock', '>', 0)->where('stock', '<', 10)->count();
+        $expiring = (clone $query)->where('stock', '>', 0)->whereBetween('expired_date', [now(), now()->addDays(30)])->count();
+        $expired = (clone $query)->where('expired_date', '<', now())->count();
 
         return [
             'Total Nilai Stok' => $this->formatMoney($totalValue),
@@ -227,6 +249,7 @@ class StockReport extends BaseReport
         return [
             'stock_filter' => 'stockFilter',
             'category_id' => 'categoryId',
+            'batch_status' => 'batchStatus',
         ];
     }
 }

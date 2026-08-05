@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\ShiftStatusCast;
 use App\Enums\ShiftStatus;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,7 +35,7 @@ class CashierShift extends Model
             'expected_cash' => 'decimal:2',
             'actual_cash' => 'decimal:2',
             'difference' => 'decimal:2',
-            'status' => ShiftStatus::class,
+            'status' => ShiftStatusCast::class,
         ];
     }
 

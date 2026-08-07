@@ -16,9 +16,10 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Auth\Access\Authorizable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\HtmlString;
 
 class ImportProducts extends Page
 {
@@ -72,7 +73,7 @@ class ImportProducts extends Page
                         EmbeddedSchema::make('form'),
                         Placeholder::make('validation_results')
                             ->label('Hasil Validasi')
-                            ->content(fn (): string => $this->renderValidationResults()),
+                            ->content(fn (): string|Htmlable => $this->renderValidationResults()),
                     ])
                     ->footerActions([
                         Action::make('validate')
@@ -119,7 +120,7 @@ class ImportProducts extends Page
         }
 
         try {
-            $importService = new ProductImportService();
+            $importService = new ProductImportService;
             $fullPath = Storage::disk('local')->path($filePath);
             $result = $importService->validateFile($fullPath);
         } catch (\Exception $exception) {
@@ -166,7 +167,7 @@ class ImportProducts extends Page
         }
 
         try {
-            $importService = new ProductImportService();
+            $importService = new ProductImportService;
             $created = $importService->importRows($this->validatedRows);
 
             Notification::make()
@@ -224,10 +225,14 @@ class ImportProducts extends Page
         return null;
     }
 
-    protected function renderValidationResults(): string
+    protected function renderValidationResults(): string|Htmlable
     {
         if ($this->validationErrors !== null && count($this->validationErrors) > 0) {
-            return implode("\n", $this->validationErrors);
+            $items = collect($this->validationErrors)
+                ->map(fn (string $error): string => '<li>'.e($error).'</li>')
+                ->implode('');
+
+            return new HtmlString("<ul class=\"list-disc list-inside space-y-1 text-danger-600\">{$items}</ul>");
         }
 
         if ($this->validatedRowCount !== null) {

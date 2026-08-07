@@ -21,4 +21,25 @@ class EditStockOpname extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    /**
+     * The product/rack filters only change what's visible in the repeater. A relationship
+     * Repeater persists directly from its own live state (before mutateFormDataBeforeSave
+     * ever runs), so the full item list must be restored here, right before validation/save.
+     */
+    public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
+    {
+        $this->restoreFullItemsFromSource();
+
+        parent::save($shouldRedirect, $shouldSendSavedNotification);
+    }
+
+    protected function restoreFullItemsFromSource(): void
+    {
+        $itemsSource = $this->data['items_source'] ?? null;
+
+        if (is_array($itemsSource)) {
+            $this->data['items'] = $itemsSource;
+        }
+    }
 }

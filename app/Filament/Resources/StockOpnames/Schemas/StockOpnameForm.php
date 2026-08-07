@@ -111,11 +111,16 @@ class StockOpnameForm
                         $set('items_source', $state ?? []);
                     })
                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $set('items_source', $state ?? []);
+                        $productFilter = (int) ($get('product_filter') ?? 0);
+                        $rackFilter = (string) ($get('rack_filter') ?? '');
+                        $previousSource = $get('items_source') ?? [];
 
-                        $productFilter = $get('product_filter');
-                        $rackFilter = $get('rack_filter');
-                        $filteredItems = CreateStockOpname::getFilteredItemsForStockOpname($state ?? [], (int) ($productFilter ?? 0), (string) ($rackFilter ?? ''));
+                        // Merge the edited/added/removed visible items back into the full
+                        // source so items hidden by the active filter aren't lost.
+                        $mergedSource = CreateStockOpname::mergeVisibleItemsIntoSource($previousSource, $state ?? [], $productFilter, $rackFilter);
+                        $set('items_source', $mergedSource);
+
+                        $filteredItems = CreateStockOpname::getFilteredItemsForStockOpname($mergedSource, $productFilter, $rackFilter);
                         $set('items', $filteredItems);
                     })
                     ->schema([
@@ -130,9 +135,6 @@ class StockOpnameForm
                                 $set('system_stock', 0);
                                 $set('physical_stock', 0);
                                 $set('difference', 0);
-
-                                $items = $get('../../items') ?? [];
-                                $set('../../items_source', $items);
                             }),
 
                         Select::make('product_batch_id')

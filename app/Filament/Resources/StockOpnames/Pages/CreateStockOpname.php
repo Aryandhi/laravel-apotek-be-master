@@ -5,6 +5,7 @@ namespace App\Filament\Resources\StockOpnames\Pages;
 use App\Filament\Resources\StockOpnames\StockOpnameResource;
 use App\Models\Product;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Arr;
 
 class CreateStockOpname extends CreateRecord
 {
@@ -13,6 +14,27 @@ class CreateStockOpname extends CreateRecord
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
+    }
+
+    /**
+     * The product/rack filters only change what's visible in the repeater. A relationship
+     * Repeater persists directly from its own live state (before mutateFormDataBeforeCreate
+     * ever runs), so the full item list must be restored here, right before validation/save.
+     */
+    public function create(bool $another = false): void
+    {
+        $this->restoreFullItemsFromSource();
+
+        parent::create($another);
+    }
+
+    protected function restoreFullItemsFromSource(): void
+    {
+        $itemsSource = $this->data['items_source'] ?? null;
+
+        if (is_array($itemsSource)) {
+            $this->data['items'] = $itemsSource;
+        }
     }
 
     public static function getProgressSummary(array $items, array $productNamesById = []): array
@@ -130,7 +152,22 @@ class CreateStockOpname extends CreateRecord
 
                 return true;
             })
-            ->values()
             ->all();
+    }
+
+    /**
+     * Merge the currently visible (possibly filtered) items back into the full item
+     * source, so items hidden by the active filter are never lost when the visible
+     * set is edited, added to, or has an item removed.
+     *
+     * @param  array<int|string, mixed>  $source
+     * @param  array<int|string, mixed>  $visibleItems
+     * @return array<int|string, mixed>
+     */
+    public static function mergeVisibleItemsIntoSource(array $source, array $visibleItems, int $productFilterId = 0, ?string $rackFilter = ''): array
+    {
+        $visibleKeys = array_keys(self::getFilteredItemsForStockOpname($source, $productFilterId, $rackFilter));
+
+        return Arr::except($source, $visibleKeys) + $visibleItems;
     }
 }

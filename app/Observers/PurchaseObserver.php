@@ -68,6 +68,10 @@ class PurchaseObserver
             $batchNumber = $item->batch_number ?: 'BTH-'.now()->format('Ymd').'-'.$item->id;
             $expiredDate = $item->expired_date ?: now()->addYears(2);
 
+            if (ProductBatch::where('batch_number', $batchNumber)->exists()) {
+                throw new \RuntimeException("Nomor batch '{$batchNumber}' untuk produk '{$item->product->name}' sudah digunakan oleh batch produk lain. Ubah nomor batch pada item pembelian sebelum menerima barang.");
+            }
+
             $sellingPrice = floatval($item->selling_price ?? 0);
             $marginPercentage = floatval($item->margin_percentage ?? 0);
 

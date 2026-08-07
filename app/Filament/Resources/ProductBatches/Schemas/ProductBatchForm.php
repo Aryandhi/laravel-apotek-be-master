@@ -34,7 +34,11 @@ class ProductBatchForm
                                     ->label('Nomor Batch')
                                     ->placeholder('cth: BTH-2024-001')
                                     ->required()
-                                    ->maxLength(100),
+                                    ->maxLength(100)
+                                    ->unique(ignoreRecord: true)
+                                    ->validationMessages([
+                                        'unique' => 'Nomor batch ini sudah digunakan oleh produk lain. Gunakan nomor batch yang berbeda.',
+                                    ]),
                             ]),
                         Grid::make(2)
                             ->schema([

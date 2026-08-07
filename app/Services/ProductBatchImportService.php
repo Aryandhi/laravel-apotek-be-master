@@ -17,6 +17,7 @@ class ProductBatchImportService
         $rows = $this->loadRows($filePath);
         $errors = [];
         $validRows = [];
+        $seenBatchNumbers = [];
 
         foreach ($rows as $index => $row) {
             $lineNumber = $index + 2;
@@ -31,11 +32,13 @@ class ProductBatchImportService
 
             if ($productName === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'product' wajib diisi.";
+
                 continue;
             }
 
             if ($batchNumber === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'batch_number' wajib diisi.";
+
                 continue;
             }
 
@@ -43,6 +46,7 @@ class ProductBatchImportService
 
             if (! $product) {
                 $errors[] = "Baris {$lineNumber}: produk '{$productName}' tidak ditemukan.";
+
                 continue;
             }
 
@@ -50,6 +54,7 @@ class ProductBatchImportService
 
             if ($expiredDate === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'expired_date' wajib diisi dan harus berupa tanggal valid.";
+
                 continue;
             }
 
@@ -57,18 +62,27 @@ class ProductBatchImportService
 
             if ($normalizedStatus === null) {
                 $errors[] = "Baris {$lineNumber}: status '{$statusValue}' tidak valid.";
+
+                continue;
+            }
+
+            if (isset($seenBatchNumbers[$batchNumber])) {
+                $errors[] = "Baris {$lineNumber}: nomor batch '{$batchNumber}' duplikat dengan baris {$seenBatchNumbers[$batchNumber]} pada file yang sama.";
+
                 continue;
             }
 
             $existingBatch = ProductBatch::query()
-                ->where('product_id', $product->id)
                 ->where('batch_number', $batchNumber)
                 ->exists();
 
             if ($existingBatch) {
-                $errors[] = "Baris {$lineNumber}: batch '{$batchNumber}' sudah ada untuk produk '{$product->name}'.";
+                $errors[] = "Baris {$lineNumber}: nomor batch '{$batchNumber}' sudah digunakan pada data batch produk lain.";
+
                 continue;
             }
+
+            $seenBatchNumbers[$batchNumber] = $lineNumber;
 
             $sellingPrice = $sellingPriceInput ?? round($purchasePrice * (1 + ($marginPercentage / 100)), 2);
 
@@ -95,7 +109,6 @@ class ProductBatchImportService
     {
         $created = 0;
 
-        
         foreach ($rows as $row) {
             ProductBatch::create($row);
             $created++;

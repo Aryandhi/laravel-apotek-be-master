@@ -241,9 +241,15 @@ class PurchasesTable
                                         continue;
                                     }
 
+                                    $batchNumber = $item->batch_number ?: 'BTH-'.now()->format('Ymd').'-'.$item->id;
+
+                                    if (ProductBatch::where('batch_number', $batchNumber)->exists()) {
+                                        throw new \RuntimeException("Nomor batch '{$batchNumber}' untuk produk '{$item->product->name}' sudah digunakan oleh batch produk lain. Ubah nomor batch pada item pembelian sebelum menerima barang.");
+                                    }
+
                                     $batch = ProductBatch::create([
                                         'product_id' => $item->product_id,
-                                        'batch_number' => $item->batch_number ?: 'BTH-'.now()->format('Ymd').'-'.$item->id,
+                                        'batch_number' => $batchNumber,
                                         'expired_date' => $item->expired_date ?: now()->addYears(2),
                                         'purchase_price' => $item->purchase_price,
                                         'selling_price' => $item->selling_price ?: $item->product->selling_price,

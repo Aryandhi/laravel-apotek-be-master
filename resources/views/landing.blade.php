@@ -632,7 +632,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-white">Wise Integra Digital</h4>
+                                <h4 class="font-semibold text-white">Win Integra</h4>
                                 <p class="text-gray-400 italic">Smart Digital Solutions for Growing Pharmacies</p>
                             </div>
                         </div>
@@ -665,7 +665,7 @@
                     </div>
                     <span class="font-semibold text-white">Apotek POS</span>
                 </div>
-                <p class="text-sm">&copy; {{ date('Y') }} POS Apotek Modern &bull; <a href="#" target="_blank" class="text-teal-400 hover:text-teal-300 transition-colors">Wise Integra Digital</a></p>
+                <p class="text-sm">&copy; {{ date('Y') }} POS Apotek Modern &bull; <a href="#" target="_blank" class="text-teal-400 hover:text-teal-300 transition-colors">Win Integra</a></p>
             </div>
         </div>
     </footer>

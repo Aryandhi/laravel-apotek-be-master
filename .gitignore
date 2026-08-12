@@ -16,10 +16,13 @@
 # /public/build
 /public/hot
 /public/storage
-/public/build.zip
 /storage/*.key
 /storage/pail
 /vendor
 Homestead.json
 Homestead.yaml
 Thumbs.db
+npm-debug.log
+yarn-error.log
+# /public/build  
+/public/build.zip

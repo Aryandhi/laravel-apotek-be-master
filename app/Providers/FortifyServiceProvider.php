@@ -48,6 +48,7 @@ class FortifyServiceProvider extends ServiceProvider
             if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
                 // Check if user has POS access role
                 $allowedRoles = [
+                    UserRole::SuperAdmin,
                     UserRole::Owner,
                     UserRole::Pharmacist,
                     UserRole::Assistant,

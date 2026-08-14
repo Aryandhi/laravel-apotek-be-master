@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Traits\LogsActivity;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,8 +14,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -46,8 +46,8 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // User wajib aktif (is_active = true) dan memiliki role Owner/Admin
-        return $this->is_active && $this->isOwner();
+        // User wajib aktif (is_active = true) dan memiliki role Owner/Super Admin
+        return $this->is_active && ($this->isOwner() || $this->isSuperAdmin());
     }
 
     public function store(): BelongsTo
@@ -85,6 +85,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === UserRole::Owner;
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === UserRole::SuperAdmin;
+    }
+
     public function isPharmacist(): bool
     {
         return $this->role === UserRole::Pharmacist;
@@ -97,7 +102,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPrescription(): bool
     {
-        return in_array($this->role, [UserRole::Owner, UserRole::Pharmacist, UserRole::Assistant]);
+        return in_array($this->role, [UserRole::SuperAdmin, UserRole::Owner, UserRole::Pharmacist, UserRole::Assistant]);
     }
 
     public function scopeActive($query)
@@ -109,5 +114,4 @@ class User extends Authenticatable implements FilamentUser
     {
         return $query->where('role', $role);
     }
-    
 }

@@ -41,7 +41,11 @@ class CreateUser extends CreateRecord
             array_unique($roleNames)
         );
 
-        if (in_array('super admin', $normalizedRoleNames, true) || in_array('owner', $normalizedRoleNames, true)) {
+        if (in_array('super admin', $normalizedRoleNames, true)) {
+            return UserRole::SuperAdmin->value;
+        }
+
+        if (in_array('owner', $normalizedRoleNames, true)) {
             return UserRole::Owner->value;
         }
 

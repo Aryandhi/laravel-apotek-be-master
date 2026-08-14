@@ -40,6 +40,7 @@
 
     <!-- Navigation -->
     <nav class="mt-6 flex-1 space-y-1 px-3">
+        @can('dashboard.view')
         <a href="{{ route('pos.dashboard') }}"
            class="{{ request()->routeIs('pos.dashboard') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -47,7 +48,9 @@
             </svg>
             Dashboard
         </a>
+        @endcan
 
+        @can('sales.create')
         <a href="{{ route('pos.transactions.create') }}"
            class="{{ request()->routeIs('pos.transactions.create') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -56,7 +59,9 @@
             Penjualan Baru
             <span class="ml-auto rounded bg-white/20 px-2 py-0.5 text-xs">F1</span>
         </a>
+        @endcan
 
+        @can('products.view')
         <a href="{{ route('pos.products.index') }}"
            class="{{ request()->routeIs('pos.products.*') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -65,7 +70,9 @@
             Cari Produk
             <span class="ml-auto rounded bg-white/20 px-2 py-0.5 text-xs">F2</span>
         </a>
+        @endcan
 
+        @can('sales.view')
         <a href="{{ route('pos.transactions.index') }}"
            class="{{ request()->routeIs('pos.transactions.index') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -73,9 +80,11 @@
             </svg>
             Riwayat Transaksi
         </a>
+        @endcan
 
         <hr class="my-4 border-emerald-500/30">
 
+        @can('customers.view')
         <a href="{{ route('pos.customers.index') }}"
            class="{{ request()->routeIs('pos.customers.*') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -83,7 +92,9 @@
             </svg>
             Pelanggan
         </a>
+        @endcan
 
+        @can('cashier-shifts.view')
         <a href="{{ route('pos.shift.index') }}"
            class="{{ request()->routeIs('pos.shift.*') ? 'bg-white/20 text-white' : 'text-emerald-100 hover:bg-white/10 hover:text-white' }} group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -91,6 +102,7 @@
             </svg>
             Kelola Shift
         </a>
+        @endcan
 
         <hr class="my-4 border-emerald-500/30">
 
@@ -105,6 +117,7 @@
 
     <!-- Footer -->
     <div class="border-t border-emerald-500/30 p-4">
+        @if(auth()->user()?->isOwner() || auth()->user()?->isSuperAdmin())
         <a href="{{ url('/admin') }}"
            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-200 hover:bg-white/10 hover:text-white transition-colors">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -112,5 +125,6 @@
             </svg>
             Admin Panel
         </a>
+        @endif
     </div>
 </div>

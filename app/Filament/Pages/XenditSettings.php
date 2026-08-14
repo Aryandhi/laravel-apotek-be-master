@@ -22,7 +22,7 @@ class XenditSettings extends Page
 {
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('settings.view') ?? false;
+        return auth()->user()?->isSuperAdmin() ?? false;
     }
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;

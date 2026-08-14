@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Filament\Pages\XenditSettings;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
+use App\Filament\Resources\XenditTransactions\XenditTransactionResource;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -92,5 +94,31 @@ class UserRoleResolutionTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertSame(UserRole::SuperAdmin, $user->fresh()->role);
+    }
+
+    public function test_xendit_payment_menu_is_only_accessible_to_super_admin(): void
+    {
+        Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Owner', 'guard_name' => 'web']);
+
+        $superAdmin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'is_active' => true,
+        ]);
+        $superAdmin->assignRole('Super Admin');
+
+        $owner = User::factory()->create([
+            'role' => UserRole::Owner,
+            'is_active' => true,
+        ]);
+        $owner->assignRole('Owner');
+
+        $this->actingAs($superAdmin);
+        $this->assertTrue(XenditSettings::canAccess());
+        $this->assertTrue(XenditTransactionResource::canAccess());
+
+        $this->actingAs($owner);
+        $this->assertFalse(XenditSettings::canAccess());
+        $this->assertFalse(XenditTransactionResource::canAccess());
     }
 }

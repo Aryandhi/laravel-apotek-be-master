@@ -18,7 +18,7 @@ class XenditTransactionResource extends Resource
 {
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('xendit.view') ?? false;
+        return auth()->user()?->isSuperAdmin() ?? false;
     }
 
     public static function canEdit(Model $record): bool

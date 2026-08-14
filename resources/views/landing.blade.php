@@ -46,7 +46,7 @@
                     <a href="/pos/login" class="text-emerald-600 font-medium hover:text-emerald-700 transition-colors">POS</a>
                     <a href="#features" class="text-gray-600 hover:text-teal-600 transition-colors">Fitur</a>
                     <a href="#screenshots" class="text-gray-600 hover:text-teal-600 transition-colors">Screenshot</a>
-                    <a href="#pricing" class="text-gray-600 hover:text-teal-600 transition-colors">Harga</a>
+                    {{-- <a href="#pricing" class="text-gray-600 hover:text-teal-600 transition-colors">Harga</a> --}}
                     <a href="#contact" class="text-gray-600 hover:text-teal-600 transition-colors">Kontak</a>
                 </div>
                 <div class="flex items-center gap-3">

@@ -74,9 +74,8 @@ class UserForm
                         // Legacy field - hidden but kept for backward compatibility
                         Select::make('role')
                             ->options(UserRole::class)
-                            ->default('cashier')
                             ->hidden()
-                            ->dehydrated(),
+                            ->dehydrated(false),
                     ]),
             ]);
     }

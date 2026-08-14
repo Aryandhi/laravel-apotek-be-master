@@ -12,8 +12,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable;
 
@@ -40,6 +42,12 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'is_active' => 'boolean',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // User wajib aktif (is_active = true) dan memiliki role Owner/Admin
+        return $this->is_active && $this->isOwner();
     }
 
     public function store(): BelongsTo
@@ -101,4 +109,5 @@ class User extends Authenticatable
     {
         return $query->where('role', $role);
     }
+    
 }

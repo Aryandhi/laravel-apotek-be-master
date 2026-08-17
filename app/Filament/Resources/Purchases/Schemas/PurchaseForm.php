@@ -32,7 +32,11 @@ class PurchaseForm
                                     ->label('No. Invoice')
                                     ->required()
                                     ->placeholder('cth: INV-2026-001')
-                                    ->maxLength(100),
+                                    ->maxLength(100)
+                                    ->unique(ignoreRecord: true)
+                                    ->validationMessages([
+                                        'unique' => 'Nomor invoice ini sudah digunakan. Gunakan nomor invoice yang berbeda.',
+                                    ]),
                                 DatePicker::make('date')
                                     ->label('Tanggal')
                                     ->required()
@@ -102,9 +106,9 @@ class PurchaseForm
                                             ->label('Qty')
                                             ->numeric()
                                             ->required()
-                                            ->default(1)
+                                            ->default(null)
                                             ->minValue(1)
-                                            ->reactive()
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
                                             ->columnSpan(1),
                                         Select::make('unit_id')
@@ -118,8 +122,8 @@ class PurchaseForm
                                             ->numeric()
                                             ->required()
                                             ->prefix('Rp')
-                                            ->default(0)
-                                            ->reactive()
+                                            ->default(null)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
                                             ->columnSpan(1),
                                         TextInput::make('total')
@@ -146,8 +150,8 @@ class PurchaseForm
                                             ->label('Margin %')
                                             ->numeric()
                                             ->required()
-                                            ->default(0)
-                                            ->reactive()
+                                            ->default(null)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
                                             ->suffix('%')
                                             ->minValue(0),
@@ -164,7 +168,7 @@ class PurchaseForm
                                             ->numeric()
                                             ->prefix('Rp')
                                             ->default(0)
-                                            ->reactive()
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get)),
                                     ]),
                                 Hidden::make('subtotal')
@@ -206,15 +210,16 @@ class PurchaseForm
                                     ->default(0)
                                     ->prefix('Rp')
                                     ->minValue(0)
-                                    ->reactive()
-                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateGrandTotal($set, $get)),
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->helperText('Total diskon otomatis dari item barang'),
                                 TextInput::make('tax')
                                     ->label('Pajak')
                                     ->numeric()
                                     ->default(0)
                                     ->prefix('Rp')
                                     ->minValue(0)
-                                    ->reactive()
+                                    ->live(onBlur: true)
                                     ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateGrandTotal($set, $get)),
                                 TextInput::make('total')
                                     ->label('Total')
@@ -232,7 +237,7 @@ class PurchaseForm
                                     ->default(0)
                                     ->prefix('Rp')
                                     ->minValue(0)
-                                    ->reactive(),
+                                    ->live(onBlur: true),
                                 Placeholder::make('remaining_display')
                                     ->label('Sisa Pembayaran')
                                     ->content(function ($get) {
@@ -266,41 +271,52 @@ class PurchaseForm
 
     private static function calculateItemTotal(Set $set, Get $get): void
     {
-        $quantity = floatval($get('quantity') ?? 0);
-        $price = floatval($get('purchase_price') ?? 0);
-        $margin = floatval($get('margin_percentage') ?? 0);
-        $discount = floatval($get('discount') ?? 0);
+        $quantity = self::toFloat($get('quantity') ?? 0);
+        $price = self::toFloat($get('purchase_price') ?? 0);
+        $margin = self::toFloat($get('margin_percentage') ?? 0);
+        $discount = self::toFloat($get('discount') ?? 0);
 
         $sellingPrice = $price * (1 + ($margin / 100));
-
         $subtotal = $quantity * $price;
-        $total = $subtotal - $discount;
+        $total = max(0, $subtotal - $discount);
 
         $set('selling_price', round($sellingPrice, 2));
-        $set('subtotal', $subtotal);
-        $set('total', max(0, $total));
+        $set('subtotal', round($subtotal, 2));
+        $set('total', round($total, 2));
     }
 
     private static function calculateTotals(Set $set, Get $get): void
     {
         $items = $get('items') ?? [];
-        $subtotal = 0;
+        $subtotal = 0.0;
+        $discount = 0.0;
 
         foreach ($items as $item) {
-            $subtotal += floatval($item['total'] ?? 0);
+            $subtotal += self::toFloat($item['subtotal'] ?? 0);
+            $discount += self::toFloat($item['discount'] ?? 0);
         }
 
-        $set('subtotal', $subtotal);
+        $set('subtotal', round($subtotal, 2));
+        $set('discount', round($discount, 2));
         self::calculateGrandTotal($set, $get);
     }
 
     private static function calculateGrandTotal(Set $set, Get $get): void
     {
-        $subtotal = floatval($get('subtotal') ?? 0);
-        $discount = floatval($get('discount') ?? 0);
-        $tax = floatval($get('tax') ?? 0);
+        $subtotal = self::toFloat($get('subtotal') ?? 0);
+        $discount = self::toFloat($get('discount') ?? 0);
+        $tax = self::toFloat($get('tax') ?? 0);
 
         $total = $subtotal - $discount + $tax;
-        $set('total', max(0, $total));
+        $set('total', round(max(0, $total), 2));
+    }
+
+    private static function toFloat(mixed $value): float
+    {
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
     }
 }

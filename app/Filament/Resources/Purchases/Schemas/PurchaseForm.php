@@ -4,6 +4,9 @@ namespace App\Filament\Resources\Purchases\Schemas;
 
 use App\Enums\PurchaseStatus;
 use App\Models\Product;
+use App\Models\ProductBatch;
+use App\Services\BatchPricingSyncService;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -16,6 +19,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseForm
 {
@@ -94,10 +98,28 @@ class PurchaseForm
                                                 if ($state) {
                                                     $product = Product::find($state);
                                                     if ($product) {
-                                                        $set('purchase_price', $product->purchase_price);
-                                                        $set('margin_percentage', 0);
+                                                        $batch = self::resolveExistingBatch($state, $get('batch_number'));
+
+                                                        if ($batch) {
+                                                            $set('purchase_price', self::toFloat($batch->purchase_price));
+                                                            $set('margin_percentage', self::toFloat($batch->margin_percentage));
+                                                            $set('selling_price', self::toFloat($batch->selling_price));
+                                                        } else {
+                                                            $productPurchasePrice = self::toFloat($product->purchase_price);
+                                                            $productSellingPrice = self::toFloat($product->selling_price);
+                                                            $derivedMargin = self::calculateMarginPercentage($productPurchasePrice, $productSellingPrice);
+
+                                                            $set('purchase_price', $productPurchasePrice);
+                                                            $set('margin_percentage', $derivedMargin);
+                                                            $set('selling_price', $productSellingPrice > 0
+                                                                ? $productSellingPrice
+                                                                : self::calculateSellingPrice($productPurchasePrice, $derivedMargin)
+                                                            );
+                                                        }
+
+                                                        $set('is_manual_selling_price', false);
                                                         $set('unit_id', $product->base_unit_id);
-                                                        self::calculateItemTotal($set, $get);
+                                                        self::calculateItemTotal($set, $get, false);
                                                     }
                                                 }
                                             })
@@ -124,7 +146,7 @@ class PurchaseForm
                                             ->prefix('Rp')
                                             ->default(null)
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
+                                            ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get, (bool) $get('is_manual_selling_price')))
                                             ->columnSpan(1),
                                         TextInput::make('total')
                                             ->label('Subtotal')
@@ -140,6 +162,25 @@ class PurchaseForm
                                         TextInput::make('batch_number')
                                             ->label('No. Batch')
                                             ->placeholder('cth: BTH-001')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function (Set $set, Get $get, ?string $state): void {
+                                                $productId = $get('product_id');
+                                                if (! $productId || ! filled($state)) {
+                                                    return;
+                                                }
+
+                                                $batch = self::resolveExistingBatch((int) $productId, $state);
+                                                if (! $batch) {
+                                                    return;
+                                                }
+
+                                                $set('purchase_price', self::toFloat($batch->purchase_price));
+                                                $set('margin_percentage', self::toFloat($batch->margin_percentage));
+                                                $set('selling_price', self::toFloat($batch->selling_price));
+                                                $set('is_manual_selling_price', false);
+
+                                                self::calculateItemTotal($set, $get, false);
+                                            })
                                             ->maxLength(100),
                                         DatePicker::make('expired_date')
                                             ->label('Tgl Kadaluarsa')
@@ -152,16 +193,36 @@ class PurchaseForm
                                             ->required()
                                             ->default(null)
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
+                                            ->afterStateUpdated(function (Set $set, Get $get): void {
+                                                $set('is_manual_selling_price', false);
+                                                self::calculateItemTotal($set, $get, false);
+                                            })
                                             ->suffix('%')
                                             ->minValue(0),
                                         TextInput::make('selling_price')
                                             ->label('Harga Jual')
                                             ->numeric()
                                             ->default(0)
-                                            ->disabled()
+                                            ->disabled(fn (Get $get): bool => ! (bool) $get('is_manual_selling_price'))
                                             ->dehydrated()
                                             ->prefix('Rp')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get, true))
+                                            ->suffixAction(
+                                                Action::make('toggleManualSellingPrice')
+                                                    ->icon(fn (Get $get): string => (bool) $get('is_manual_selling_price') ? 'heroicon-o-lock-open' : 'heroicon-o-pencil-square')
+                                                    ->tooltip(fn (Get $get): string => (bool) $get('is_manual_selling_price')
+                                                        ? 'Kunci kembali harga jual otomatis'
+                                                        : 'Edit manual harga jual')
+                                                    ->action(function (Set $set, Get $get): void {
+                                                        $isManualSellingPrice = (bool) $get('is_manual_selling_price');
+                                                        $set('is_manual_selling_price', ! $isManualSellingPrice);
+
+                                                        if ($isManualSellingPrice) {
+                                                            self::calculateItemTotal($set, $get, false);
+                                                        }
+                                                    })
+                                            )
                                             ->helperText('Harga jual dihitung otomatis dari harga beli dan margin'),
                                         TextInput::make('discount')
                                             ->label('Diskon')
@@ -175,6 +236,9 @@ class PurchaseForm
                                     ->default(0),
                                 Hidden::make('received_quantity')
                                     ->default(0),
+                                Hidden::make('is_manual_selling_price')
+                                    ->default(false)
+                                    ->dehydrated(false),
                             ])
                             ->columns(1)
                             ->addActionLabel('Tambah Barang')
@@ -261,7 +325,7 @@ class PurchaseForm
                             ->label('Dibuat Oleh')
                             ->relationship('user', 'name')
                             ->disabled()
-                            ->default(fn () => auth()->id())
+                            ->default(fn () => Auth::id())
                             ->dehydrated(),
                     ])
                     ->collapsible()
@@ -269,20 +333,49 @@ class PurchaseForm
             ]);
     }
 
-    private static function calculateItemTotal(Set $set, Get $get): void
+    private static function calculateItemTotal(Set $set, Get $get, bool $preferSellingPrice = false): void
     {
         $quantity = self::toFloat($get('quantity') ?? 0);
         $price = self::toFloat($get('purchase_price') ?? 0);
         $margin = self::toFloat($get('margin_percentage') ?? 0);
+        $sellingPrice = self::toFloat($get('selling_price') ?? 0);
         $discount = self::toFloat($get('discount') ?? 0);
 
-        $sellingPrice = $price * (1 + ($margin / 100));
+        if ($preferSellingPrice) {
+            $margin = self::calculateMarginPercentage($price, $sellingPrice);
+        } else {
+            $sellingPrice = self::calculateSellingPrice($price, $margin);
+        }
+
         $subtotal = $quantity * $price;
         $total = max(0, $subtotal - $discount);
 
         $set('selling_price', round($sellingPrice, 2));
+        $set('margin_percentage', round($margin, 2));
         $set('subtotal', round($subtotal, 2));
         $set('total', round($total, 2));
+    }
+
+    private static function calculateSellingPrice(float $purchasePrice, float $marginPercentage): float
+    {
+        return app(BatchPricingSyncService::class)->calculateSellingPrice($purchasePrice, $marginPercentage);
+    }
+
+    private static function calculateMarginPercentage(float $purchasePrice, float $sellingPrice): float
+    {
+        return app(BatchPricingSyncService::class)->calculateMarginPercentage($purchasePrice, $sellingPrice);
+    }
+
+    private static function resolveExistingBatch(int $productId, ?string $batchNumber = null): ?ProductBatch
+    {
+        $service = app(BatchPricingSyncService::class);
+
+        $batch = $service->findBatchByProductAndNumber($productId, $batchNumber);
+        if ($batch) {
+            return $batch;
+        }
+
+        return $service->findLatestBatchByProduct($productId);
     }
 
     private static function calculateTotals(Set $set, Get $get): void

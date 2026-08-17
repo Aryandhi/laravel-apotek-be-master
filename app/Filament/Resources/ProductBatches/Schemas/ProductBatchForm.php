@@ -4,7 +4,10 @@ namespace App\Filament\Resources\ProductBatches\Schemas;
 
 use App\Enums\BatchStatus;
 use App\Models\Purchase;
+use App\Services\BatchPricingSyncService;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
@@ -64,8 +67,8 @@ class ProductBatchForm
                                     ->required()
                                     ->numeric()
                                     ->default(0)
-                                    ->reactive()
-                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::updateSellingPrice($set, $get))
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::syncPricing($set, $get, (bool) $get('is_manual_selling_price')))
                                     ->prefix('Rp')
                                     ->minValue(0),
                                 TextInput::make('margin_percentage')
@@ -73,20 +76,43 @@ class ProductBatchForm
                                     ->required()
                                     ->numeric()
                                     ->default(0)
-                                    ->reactive()
-                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::updateSellingPrice($set, $get))
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function (Set $set, Get $get): void {
+                                        $set('is_manual_selling_price', false);
+                                        self::syncPricing($set, $get, false);
+                                    })
                                     ->suffix('%')
                                     ->minValue(0),
                             ]),
                         Grid::make(1)
                             ->schema([
+                                Hidden::make('is_manual_selling_price')
+                                    ->default(false)
+                                    ->dehydrated(false),
                                 TextInput::make('selling_price')
                                     ->label('Harga Jual')
                                     ->numeric()
                                     ->default(0)
-                                    ->disabled()
+                                    ->disabled(fn (Get $get): bool => ! (bool) $get('is_manual_selling_price'))
                                     ->dehydrated()
                                     ->prefix('Rp')
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => self::syncPricing($set, $get, true))
+                                    ->suffixAction(
+                                        Action::make('toggleManualSellingPrice')
+                                            ->icon(fn (Get $get): string => (bool) $get('is_manual_selling_price') ? 'heroicon-o-lock-open' : 'heroicon-o-pencil-square')
+                                            ->tooltip(fn (Get $get): string => (bool) $get('is_manual_selling_price')
+                                                ? 'Kunci kembali harga jual otomatis'
+                                                : 'Edit manual harga jual')
+                                            ->action(function (Set $set, Get $get): void {
+                                                $isManualSellingPrice = (bool) $get('is_manual_selling_price');
+                                                $set('is_manual_selling_price', ! $isManualSellingPrice);
+
+                                                if ($isManualSellingPrice) {
+                                                    self::syncPricing($set, $get, false);
+                                                }
+                                            })
+                                    )
                                     ->minValue(0)
                                     ->helperText('Harga jual dihitung otomatis dari harga beli dan margin'),
                             ]),
@@ -144,13 +170,19 @@ class ProductBatchForm
             ]);
     }
 
-    private static function updateSellingPrice(Set $set, Get $get): void
+    private static function syncPricing(Set $set, Get $get, bool $preferSellingPrice = false): void
     {
         $purchasePrice = floatval($get('purchase_price') ?? 0);
         $margin = floatval($get('margin_percentage') ?? 0);
+        $sellingPrice = floatval($get('selling_price') ?? 0);
 
-        $sellingPrice = $purchasePrice * (1 + ($margin / 100));
+        if ($preferSellingPrice) {
+            $margin = app(BatchPricingSyncService::class)->calculateMarginPercentage($purchasePrice, $sellingPrice);
+        } else {
+            $sellingPrice = app(BatchPricingSyncService::class)->calculateSellingPrice($purchasePrice, $margin);
+        }
 
+        $set('margin_percentage', round($margin, 2));
         $set('selling_price', round($sellingPrice, 2));
     }
 }

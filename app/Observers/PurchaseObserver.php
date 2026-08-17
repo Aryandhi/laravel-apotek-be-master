@@ -8,6 +8,8 @@ use App\Enums\StockMovementType;
 use App\Models\ProductBatch;
 use App\Models\Purchase;
 use App\Models\StockMovement;
+use App\Services\BatchPricingSyncService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PurchaseObserver
@@ -56,6 +58,19 @@ class PurchaseObserver
                 ->first();
 
             if ($existingBatch) {
+                $pricing = app(BatchPricingSyncService::class)->normalizePricing(
+                    $item->purchase_price,
+                    $item->margin_percentage,
+                    $item->selling_price,
+                    preferSellingPrice: floatval($item->selling_price ?? 0) > 0
+                );
+
+                $existingBatch->update([
+                    'purchase_price' => $pricing['purchase_price'],
+                    'margin_percentage' => $pricing['margin_percentage'],
+                    'selling_price' => $pricing['selling_price'],
+                ]);
+
                 Log::info('Batch already exists for this item', [
                     'batch_id' => $existingBatch->id,
                     'product_id' => $item->product_id,
@@ -72,20 +87,20 @@ class PurchaseObserver
                 throw new \RuntimeException("Nomor batch '{$batchNumber}' untuk produk '{$item->product->name}' sudah digunakan oleh batch produk lain. Ubah nomor batch pada item pembelian sebelum menerima barang.");
             }
 
-            $sellingPrice = floatval($item->selling_price ?? 0);
-            $marginPercentage = floatval($item->margin_percentage ?? 0);
-
-            if ($sellingPrice <= 0) {
-                $sellingPrice = $item->purchase_price * (1 + ($marginPercentage / 100));
-            }
+            $pricing = app(BatchPricingSyncService::class)->normalizePricing(
+                $item->purchase_price,
+                $item->margin_percentage,
+                $item->selling_price,
+                preferSellingPrice: floatval($item->selling_price ?? 0) > 0
+            );
 
             $batch = ProductBatch::create([
                 'product_id' => $item->product_id,
                 'batch_number' => $batchNumber,
                 'expired_date' => $expiredDate,
-                'purchase_price' => $item->purchase_price,
-                'margin_percentage' => $marginPercentage,
-                'selling_price' => round($sellingPrice, 2),
+                'purchase_price' => $pricing['purchase_price'],
+                'margin_percentage' => $pricing['margin_percentage'],
+                'selling_price' => $pricing['selling_price'],
                 'stock' => $remainingQty,
                 'initial_stock' => $remainingQty,
                 'supplier_id' => $purchase->supplier_id,
@@ -110,7 +125,7 @@ class PurchaseObserver
                 'reference_type' => Purchase::class,
                 'reference_id' => $purchase->id,
                 'notes' => "Penerimaan dari pembelian {$purchase->invoice_number}",
-                'user_id' => auth()->id() ?? $purchase->user_id,
+                'user_id' => Auth::id() ?? $purchase->user_id,
             ]);
 
             Log::info('Created stock movement', [

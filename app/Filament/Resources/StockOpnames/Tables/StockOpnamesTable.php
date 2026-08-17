@@ -150,7 +150,7 @@ class StockOpnamesTable
                         }
                     }),
 
-                Action::make('cancel')
+                Action::make('cancelOpname')
                     ->label('Batalkan')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

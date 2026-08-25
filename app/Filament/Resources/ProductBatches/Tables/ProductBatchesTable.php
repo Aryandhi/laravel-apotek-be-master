@@ -52,6 +52,9 @@ class ProductBatchesTable
                     ->color(fn ($state) => $state > 0 ? 'success' : 'danger')
                     ->alignCenter()
                     ->sortable(),
+                TextColumn::make('product.baseUnit.name')
+                    ->label('Satuan')
+                    ->sortable(),
                 TextColumn::make('purchase_price')
                     ->label('Harga Beli')
                     ->money('IDR')

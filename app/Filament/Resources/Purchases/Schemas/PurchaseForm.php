@@ -29,6 +29,7 @@ class PurchaseForm
             ->components([
                 Section::make('Informasi Pembelian')
                     ->description('Data dasar pembelian')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)
                             ->schema([
@@ -95,6 +96,18 @@ class PurchaseForm
                                             ->required()
                                             ->reactive()
                                             ->afterStateUpdated(function (Set $set, Get $get, ?int $state) {
+                                                if (! $state) {
+                                                    $set('unit_id', null);
+                                                    $set('purchase_price', null);
+                                                    $set('margin_percentage', null);
+                                                    $set('selling_price', null);
+                                                    $set('subtotal', 0);
+                                                    $set('total', 0);
+                                                    $set('is_manual_selling_price', false);
+
+                                                    return;
+                                                }
+
                                                 if ($state) {
                                                     $product = Product::find($state);
                                                     if ($product) {
@@ -138,6 +151,8 @@ class PurchaseForm
                                             ->relationship('unit', 'name')
                                             ->required()
                                             ->preload()
+                                            ->disabled()
+                                            ->dehydrated()
                                             ->columnSpan(1),
                                         TextInput::make('purchase_price')
                                             ->label('Harga Beli')

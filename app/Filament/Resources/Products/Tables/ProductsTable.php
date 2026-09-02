@@ -45,10 +45,6 @@ class ProductsTable
                     ->color('info')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('baseUnit.name')
-                    ->label('Satuan')
-                    ->searchable()
-                    ->toggleable(),
                 TextColumn::make('purchase_price')
                     ->label('Harga Beli')
                     ->money('IDR')
@@ -68,11 +64,15 @@ class ProductsTable
                         return $query->withSum(['batches' => fn ($q) => $q->where('status', 'active')], 'stock')
                             ->orderBy('batches_sum_stock', $direction);
                     }),
+                TextColumn::make('baseUnit.name')
+                    ->label('Satuan')
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('min_stock')
                     ->label('Min')
                     ->numeric()
                     ->alignCenter()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
                 IconColumn::make('requires_prescription')
                     ->label('Resep')
                     ->boolean()

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
@@ -83,6 +84,16 @@ class Product extends Model
         return $this->hasMany(PurchaseItem::class);
     }
 
+    public function purchaseOrderItems(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function purchasePlanItem(): HasOne
+    {
+        return $this->hasOne(PurchasePlanItem::class);
+    }
+
     public function getTotalStockAttribute(): int
     {
         return $this->batches()->where('status', 'active')->sum('stock');
@@ -91,6 +102,32 @@ class Product extends Model
     public function isLowStock(): bool
     {
         return $this->total_stock <= $this->min_stock;
+    }
+
+    /**
+     * Supplier currently selected for this product in the Perencanaan (planning) tab.
+     * Proxies to the related PurchasePlanItem so it can be used as an editable table column.
+     */
+    public function getPurchasePlanSupplierIdAttribute(): ?int
+    {
+        return $this->purchasePlanItem?->supplier_id;
+    }
+
+    public function setPurchasePlanSupplierIdAttribute(?int $value): void
+    {
+        if ($value === null) {
+            $this->purchasePlanItem?->delete();
+
+            return;
+        }
+
+        $this->setRelation(
+            'purchasePlanItem',
+            PurchasePlanItem::updateOrCreate(
+                ['product_id' => $this->getKey()],
+                ['supplier_id' => $value]
+            )
+        );
     }
 
     public function scopeActive($query)

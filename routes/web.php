@@ -9,6 +9,7 @@ use App\Http\Controllers\Pos\SettingsController;
 use App\Http\Controllers\Pos\ShiftController;
 use App\Http\Controllers\Pos\TransactionController;
 use App\Http\Controllers\Pos\XenditPaymentController;
+use App\Http\Controllers\PurchaseOrderPrintController;
 use App\Http\Controllers\Reports\ReportPreviewController;
 use App\Http\Middleware\EnsureUserCanAccessPos;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reports/preview/{report}/pdf', [ReportPreviewController::class, 'showPdf'])
         ->name('reports.preview.pdf');
+
+    Route::get('/purchase-orders/{purchaseOrder}/print', [PurchaseOrderPrintController::class, 'show'])
+        ->name('purchase-orders.print');
 
     Route::get('/reports/batch-products/preview', function () {
         return redirect()->route('reports.preview.page', [

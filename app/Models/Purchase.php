@@ -19,6 +19,7 @@ class Purchase extends Model
     protected $fillable = [
         'invoice_number',
         'supplier_id',
+        'purchase_order_id',
         'date',
         'due_date',
         'status',
@@ -48,6 +49,11 @@ class Purchase extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     public function user(): BelongsTo

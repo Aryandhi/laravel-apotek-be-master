@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Observers\PurchaseItemObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ObservedBy(PurchaseItemObserver::class)]
 class PurchaseItem extends Model
 {
     protected $fillable = [
         'purchase_id',
         'product_id',
+        'purchase_order_item_id',
         'batch_number',
         'expired_date',
         'quantity',
@@ -46,6 +50,11 @@ class PurchaseItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function purchaseOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderItem::class);
     }
 
     public function unit(): BelongsTo

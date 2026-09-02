@@ -39,7 +39,6 @@ class InventorySettings extends Page
     public function mount(): void
     {
         $this->form->fill([
-            'low_stock_threshold' => Setting::get('low_stock_threshold', 10),
             'near_expired_days' => Setting::get('near_expired_days', 90),
             'enable_batch_tracking' => Setting::get('enable_batch_tracking', true) === 'true' || Setting::get('enable_batch_tracking', true) === true,
             'enable_expired_tracking' => Setting::get('enable_expired_tracking', true) === 'true' || Setting::get('enable_expired_tracking', true) === true,
@@ -56,14 +55,6 @@ class InventorySettings extends Page
         return $schema
             ->statePath('data')
             ->components([
-                TextInput::make('low_stock_threshold')
-                    ->label('Ambang Batas Stok Minimum')
-                    ->numeric()
-                    ->required()
-                    ->minValue(1)
-                    ->suffix('unit')
-                    ->helperText('Produk dengan stok di bawah nilai ini akan ditandai sebagai "Stok Rendah"'),
-
                 TextInput::make('near_expired_days')
                     ->label('Ambang Batas Hampir Kadaluarsa')
                     ->numeric()

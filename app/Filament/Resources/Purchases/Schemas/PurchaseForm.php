@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Purchases\Schemas;
 
+use App\Enums\PurchaseOrderStatus;
 use App\Enums\PurchaseStatus;
 use App\Models\Product;
 use App\Models\ProductBatch;
+use App\Models\Purchase;
+use App\Models\PurchaseOrder;
 use App\Services\BatchPricingSyncService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -54,6 +57,29 @@ class PurchaseForm
                                     ->displayFormat('d M Y')
                                     ->helperText('Tanggal jatuh tempo pembayaran'),
                             ]),
+                        Select::make('purchase_order_id')
+                            ->label('No. Surat Pesanan')
+                            ->options(fn () => PurchaseOrder::query()
+                                ->whereIn('status', [PurchaseOrderStatus::Order, PurchaseOrderStatus::Partial])
+                                ->orderByDesc('order_date')
+                                ->get()
+                                ->mapWithKeys(fn (PurchaseOrder $order) => [
+                                    $order->id => "{$order->po_number} - {$order->title}",
+                                ])
+                                ->toArray()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->disabled(fn (?Purchase $record) => filled($record))
+                            ->helperText('Pilih untuk mengisi otomatis item dari Surat Pesanan (hanya item yang belum diinput di faktur lain yang ditampilkan)')
+                            ->afterStateUpdated(function (Set $set, Get $get, ?int $state) {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                self::fillItemsFromPurchaseOrder($set, $get, $state);
+                            }),
                         Grid::make(2)
                             ->schema([
                                 Select::make('supplier_id')
@@ -251,6 +277,8 @@ class PurchaseForm
                                     ->default(0),
                                 Hidden::make('received_quantity')
                                     ->default(0),
+                                Hidden::make('purchase_order_item_id')
+                                    ->default(null),
                                 Hidden::make('is_manual_selling_price')
                                     ->default(false)
                                     ->dehydrated(false),
@@ -391,6 +419,61 @@ class PurchaseForm
         }
 
         return $service->findLatestBatchByProduct($productId);
+    }
+
+    /**
+     * Populate the items repeater and supplier from the selected Surat Pesanan (Purchase Order).
+     * Only items that still have a remaining (backorder) quantity are included.
+     */
+    private static function fillItemsFromPurchaseOrder(Set $set, Get $get, int $purchaseOrderId): void
+    {
+        $purchaseOrder = PurchaseOrder::query()
+            ->with(['items.product', 'items.unit'])
+            ->find($purchaseOrderId);
+
+        if (! $purchaseOrder) {
+            return;
+        }
+
+        $set('supplier_id', $purchaseOrder->supplier_id);
+
+        $rows = [];
+
+        foreach ($purchaseOrder->items as $orderItem) {
+            $remaining = $orderItem->remaining_quantity;
+
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            $product = $orderItem->product;
+            if (! $product) {
+                continue;
+            }
+
+            $batch = self::resolveExistingBatch($product->id);
+            $purchasePrice = $batch ? self::toFloat($batch->purchase_price) : self::toFloat($product->purchase_price);
+            $margin = $batch ? self::toFloat($batch->margin_percentage) : self::calculateMarginPercentage($purchasePrice, self::toFloat($product->selling_price));
+            $sellingPrice = $batch ? self::toFloat($batch->selling_price) : self::calculateSellingPrice($purchasePrice, $margin);
+
+            $rows[] = [
+                'product_id' => $product->id,
+                'purchase_order_item_id' => $orderItem->id,
+                'quantity' => $remaining,
+                'unit_id' => $orderItem->unit_id,
+                'purchase_price' => $purchasePrice,
+                'margin_percentage' => round($margin, 2),
+                'selling_price' => round($sellingPrice, 2),
+                'discount' => 0,
+                'subtotal' => round($remaining * $purchasePrice, 2),
+                'total' => round($remaining * $purchasePrice, 2),
+                'received_quantity' => 0,
+                'is_manual_selling_price' => false,
+            ];
+        }
+
+        $set('items', $rows);
+        self::calculateTotals($set, $get);
     }
 
     private static function calculateTotals(Set $set, Get $get): void

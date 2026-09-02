@@ -75,6 +75,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'purchase-returns.update',
             'purchase-returns.delete',
 
+            // Purchase Planning (Perencanaan)
+            'purchase-plans.view',
+            'purchase-plans.manage',
+
+            // Purchase Orders (Surat Pesanan)
+            'purchase-orders.view',
+            'purchase-orders.create',
+            'purchase-orders.update',
+            'purchase-orders.delete',
+            'purchase-orders.approve',
+            'purchase-orders.print',
+
             // Sales
             'sales.view',
             'sales.create',
@@ -195,6 +207,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'purchases.create',
             'purchase-returns.view',
             'purchase-returns.create',
+            'purchase-plans.view',
+            'purchase-plans.manage',
+            'purchase-orders.view',
+            'purchase-orders.create',
+            'purchase-orders.update',
+            'purchase-orders.delete',
+            'purchase-orders.approve',
+            'purchase-orders.print',
             'sales.view',
             'sales.create',
             'sale-returns.view',

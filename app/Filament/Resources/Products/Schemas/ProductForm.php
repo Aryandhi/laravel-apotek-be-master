@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use App\Models\Category;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -9,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -53,14 +55,25 @@ class ProductForm
 
                 Section::make('Kategori & Satuan')
                     ->schema([
-                        Grid::make(2)
+                        Grid::make(3)
                             ->schema([
                                 Select::make('category_id')
                                     ->label('Kategori')
                                     ->relationship('category', 'name')
                                     ->searchable()
                                     ->preload()
-                                    ->required(),
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (?string $state, Set $set) {
+                                        $set('category_type_id', $state ? Category::find($state)?->category_type_id : null);
+                                    }),
+                                Select::make('category_type_id')
+                                    ->label('Tipe Kategori')
+                                    ->relationship('categoryType', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->required()
+                                    ->helperText('Menentukan golongan regulasi produk (mis. Narkotika, Psikotropika) untuk Surat Pesanan'),
                                 Select::make('base_unit_id')
                                     ->label('Satuan Dasar')
                                     ->relationship('baseUnit', 'name')

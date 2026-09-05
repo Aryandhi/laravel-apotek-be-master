@@ -22,6 +22,7 @@ class Product extends Model
         'name',
         'generic_name',
         'category_id',
+        'category_type_id',
         'base_unit_id',
         'purchase_price',
         'selling_price',
@@ -49,6 +50,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function categoryType(): BelongsTo
+    {
+        return $this->belongsTo(CategoryType::class);
     }
 
     public function baseUnit(): BelongsTo

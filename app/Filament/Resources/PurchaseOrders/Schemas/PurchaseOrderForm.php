@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PurchaseOrders\Schemas;
 
+use App\Models\Product;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -10,6 +11,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class PurchaseOrderForm
@@ -63,7 +65,7 @@ class PurchaseOrderForm
                             ->deletable(false)
                             ->reorderable(false)
                             ->schema([
-                                Grid::make(4)
+                                Grid::make(5)
                                     ->schema([
                                         Select::make('product_id')
                                             ->label('Produk')
@@ -82,6 +84,15 @@ class PurchaseOrderForm
                                             ->numeric()
                                             ->required()
                                             ->minValue(1)
+                                            ->columnSpan(1),
+                                        TextInput::make('min_stock')
+                                            ->label('Min. Stok')
+                                            ->numeric()
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function (TextInput $component, Get $get) {
+                                                $component->state(Product::find($get('product_id'))?->min_stock);
+                                            })
                                             ->columnSpan(1),
                                     ]),
                                 Textarea::make('notes')

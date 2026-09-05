@@ -168,7 +168,7 @@ class PurchaseForm
                                             ->numeric()
                                             ->required()
                                             ->default(null)
-                                            ->minValue(1)
+                                            ->minValue(fn (Get $get): int => filled($get('purchase_order_item_id')) ? 0 : 1)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
                                             ->columnSpan(1),
@@ -287,6 +287,8 @@ class PurchaseForm
                             ->addActionLabel('Tambah Barang')
                             ->reorderable(false)
                             ->collapsible()
+                            ->collapseAllAction(fn ($action) => $action->label('Sembunyikan Detail'))
+                            ->expandAllAction(fn ($action) => $action->label('Tampilkan Detail'))
                             ->itemLabel(fn (array $state): ?string => $state['product_id']
                                 ? Product::find($state['product_id'])?->name.' - Qty: '.($state['quantity'] ?? 0)
                                 : 'Barang Baru'
@@ -393,7 +395,7 @@ class PurchaseForm
         $subtotal = $quantity * $price;
         $total = max(0, $subtotal - $discount);
 
-        $set('selling_price', round($sellingPrice, 2));
+        $set('selling_price', round($sellingPrice));
         $set('margin_percentage', round($margin, 2));
         $set('subtotal', round($subtotal, 2));
         $set('total', round($total, 2));
@@ -423,7 +425,8 @@ class PurchaseForm
 
     /**
      * Populate the items repeater and supplier from the selected Surat Pesanan (Purchase Order).
-     * Only items that still have a remaining (backorder) quantity are included.
+     * Only items that still have a remaining (backorder) quantity are included, and quantity
+     * defaults to 0 so the admin must confirm what was actually received (0 = not received).
      */
     private static function fillItemsFromPurchaseOrder(Set $set, Get $get, int $purchaseOrderId): void
     {
@@ -459,14 +462,14 @@ class PurchaseForm
             $rows[] = [
                 'product_id' => $product->id,
                 'purchase_order_item_id' => $orderItem->id,
-                'quantity' => $remaining,
+                'quantity' => 0,
                 'unit_id' => $orderItem->unit_id,
                 'purchase_price' => $purchasePrice,
                 'margin_percentage' => round($margin, 2),
-                'selling_price' => round($sellingPrice, 2),
+                'selling_price' => round($sellingPrice),
                 'discount' => 0,
-                'subtotal' => round($remaining * $purchasePrice, 2),
-                'total' => round($remaining * $purchasePrice, 2),
+                'subtotal' => 0,
+                'total' => 0,
                 'received_quantity' => 0,
                 'is_manual_selling_price' => false,
             ];

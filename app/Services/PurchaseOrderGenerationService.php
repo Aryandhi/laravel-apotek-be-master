@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CategoryType as CategoryTypeEnum;
 use App\Enums\PurchaseOrderGroup;
 use App\Enums\PurchaseOrderStatus;
 use App\Models\Product;
@@ -27,7 +28,7 @@ class PurchaseOrderGenerationService
     {
         $planItems = PurchasePlanItem::query()
             ->whereNotNull('supplier_id')
-            ->with(['product.category', 'product.baseUnit'])
+            ->with(['product.category', 'product.categoryType', 'product.baseUnit'])
             ->get();
 
         if ($planItems->isEmpty()) {
@@ -83,7 +84,8 @@ class PurchaseOrderGenerationService
 
     public function resolveGroup(Product $product): PurchaseOrderGroup
     {
-        $type = $product->category?->type;
+        $code = $product->categoryType?->code ?? $product->category?->type?->value;
+        $type = $code ? CategoryTypeEnum::tryFrom($code) : null;
 
         return $type?->purchaseOrderGroup() ?? PurchaseOrderGroup::Reguler;
     }

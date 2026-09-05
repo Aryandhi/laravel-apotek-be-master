@@ -45,9 +45,9 @@ class PurchasePlanResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Perencanaan';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
-    protected static ?string $slug = 'perencanaan-pesanan/perencanaan';
+    protected static ?string $slug = 'purchase-plans';
 
     public static function table(Table $table): Table
     {

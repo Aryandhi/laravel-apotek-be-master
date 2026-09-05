@@ -50,9 +50,9 @@ class PurchaseOrderResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Surat Pesanan';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $slug = 'perencanaan-pesanan/surat-pesanan';
+    protected static ?string $slug = 'purchase-orders';
 
     public static function form(Schema $schema): Schema
     {

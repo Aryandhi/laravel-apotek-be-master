@@ -32,16 +32,19 @@ class ProductImportService
 
             if ($name === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'name' wajib diisi.";
+
                 continue;
             }
 
             if ($categoryName === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'category' wajib diisi.";
+
                 continue;
             }
 
             if ($unitName === null) {
                 $errors[] = "Baris {$lineNumber}: kolom 'unit' wajib diisi.";
+
                 continue;
             }
 
@@ -49,6 +52,7 @@ class ProductImportService
 
             if (! $category) {
                 $errors[] = "Baris {$lineNumber}: kategori '{$categoryName}' tidak ditemukan.";
+
                 continue;
             }
 
@@ -56,17 +60,20 @@ class ProductImportService
 
             if (! $unit) {
                 $errors[] = "Baris {$lineNumber}: satuan '{$unitName}' tidak ditemukan.";
+
                 continue;
             }
 
             if ($barcode !== null) {
                 if (isset($barcodeMap[$barcode])) {
                     $errors[] = "Baris {$lineNumber}: barcode '{$barcode}' duplikat di file import (sudah muncul pada baris {$barcodeMap[$barcode]}).";
+
                     continue;
                 }
 
                 if (Product::where('barcode', $barcode)->exists()) {
                     $errors[] = "Baris {$lineNumber}: barcode '{$barcode}' sudah ada di sistem.";
+
                     continue;
                 }
 
@@ -79,6 +86,7 @@ class ProductImportService
                 'name' => $name,
                 'generic_name' => $genericName,
                 'category_id' => $category->id,
+                'category_type_id' => $category->category_type_id,
                 'base_unit_id' => $unit->id,
                 'purchase_price' => 0,
                 'selling_price' => 0,

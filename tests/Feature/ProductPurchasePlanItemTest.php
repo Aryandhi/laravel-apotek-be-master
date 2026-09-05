@@ -56,7 +56,7 @@ class ProductPurchasePlanItemTest extends TestCase
         ]);
     }
 
-    public function test_low_stock_query_only_includes_products_at_or_below_min_stock(): void
+    public function test_low_stock_query_only_includes_products_strictly_below_min_stock(): void
     {
         $unit = $this->makeUnit();
 
@@ -70,10 +70,20 @@ class ProductPurchasePlanItemTest extends TestCase
             'status' => 'active',
         ]);
 
+        $equalStockProduct = $this->makeProduct('obat_bebas', $unit, minStock: 10);
+        ProductBatch::create([
+            'product_id' => $equalStockProduct->id,
+            'batch_number' => 'BTH-2',
+            'expired_date' => now()->addYear(),
+            'stock' => 10,
+            'initial_stock' => 10,
+            'status' => 'active',
+        ]);
+
         $sufficientStockProduct = $this->makeProduct('obat_bebas', $unit, minStock: 10);
         ProductBatch::create([
             'product_id' => $sufficientStockProduct->id,
-            'batch_number' => 'BTH-2',
+            'batch_number' => 'BTH-3',
             'expired_date' => now()->addYear(),
             'stock' => 50,
             'initial_stock' => 50,
@@ -87,12 +97,13 @@ class ProductPurchasePlanItemTest extends TestCase
                 'COALESCE((select sum(stock) from product_batches
                     where product_batches.product_id = products.id
                     and product_batches.status = ?
-                    and product_batches.stock > 0), 0) <= products.min_stock',
+                    and product_batches.stock > 0), 0) < products.min_stock',
                 ['active']
             )
             ->pluck('id');
 
         $this->assertTrue($results->contains($lowStockProduct->id));
+        $this->assertFalse($results->contains($equalStockProduct->id));
         $this->assertFalse($results->contains($sufficientStockProduct->id));
     }
 }

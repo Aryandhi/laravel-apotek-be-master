@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PurchasePlans\Tables;
 
+use App\Models\Product;
 use App\Models\PurchasePlanItem;
 use App\Models\Supplier;
 use App\Services\PurchaseOrderGenerationService;
@@ -10,6 +11,7 @@ use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
@@ -22,13 +24,13 @@ class PurchasePlansTable
             ->modifyQueryUsing(function (Builder $query) {
                 return $query
                     ->active()
-                    ->with(['category', 'baseUnit', 'purchasePlanItem'])
+                    ->with(['category', 'categoryType', 'baseUnit', 'purchasePlanItem'])
                     ->withSum(['activeBatches as stock_qty'], 'stock')
                     ->whereRaw(
                         'COALESCE((select sum(stock) from product_batches
                             where product_batches.product_id = products.id
                             and product_batches.status = ?
-                            and product_batches.stock > 0), 0) <= products.min_stock',
+                            and product_batches.stock > 0), 0) < products.min_stock',
                         ['active']
                     );
             })
@@ -45,7 +47,7 @@ class PurchasePlansTable
                 TextColumn::make('category.type')
                     ->label('Tipe Kategori')
                     ->badge()
-                    ->state(fn ($record) => $record->category?->type?->label() ?? '-'),
+                    ->state(fn ($record) => $record->categoryType?->name ?? $record->category?->type?->label() ?? '-'),
                 TextColumn::make('stock_qty')
                     ->label('Stok')
                     ->state(fn ($record) => (int) ($record->stock_qty ?? 0))
@@ -71,6 +73,30 @@ class PurchasePlansTable
                     ->state(fn ($record) => $record->purchase_plan_supplier_id ? 'Siap Dibuat SP' : 'Menunggu Supplier')
                     ->color(fn ($record) => $record->purchase_plan_supplier_id ? 'success' : 'gray'),
             ])
+            ->filters([
+                SelectFilter::make('rack_location')
+                    ->label('Lokasi Rak')
+                    ->placeholder('All')
+                    ->options(fn () => Product::query()
+                        ->whereNotNull('rack_location')
+                        ->where('rack_location', '!=', '')
+                        ->distinct()
+                        ->orderBy('rack_location')
+                        ->pluck('rack_location', 'rack_location')
+                    ),
+                SelectFilter::make('supplier')
+                    ->label('Supplier')
+                    ->placeholder('All')
+                    ->options(fn () => Supplier::query()->active()->orderBy('name')->pluck('name', 'id'))
+                    ->query(function (Builder $query, array $data) {
+                        if (blank($data['value'] ?? null)) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('purchasePlanItem', fn (Builder $query) => $query->where('supplier_id', $data['value']));
+                    }),
+            ])
+            ->emptyStateHeading('Data obat yang kamu cari tidak ditemukan')
             ->headerActions([
                 Action::make('generatePurchaseOrders')
                     ->label('Buat Surat Pesanan')

@@ -17,6 +17,7 @@ class EnsureUserCanAccessPos
     protected array $allowedRoles = [
         UserRole::SuperAdmin,
         UserRole::Owner,
+        UserRole::Admin,
         UserRole::Pharmacist,
         UserRole::Assistant,
         UserRole::Cashier,

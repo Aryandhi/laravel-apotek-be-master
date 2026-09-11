@@ -46,8 +46,8 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // User wajib aktif (is_active = true) dan memiliki role Owner/Super Admin
-        return $this->is_active && ($this->isOwner() || $this->isSuperAdmin());
+        // User wajib aktif (is_active = true) dan memiliki role Owner/Super Admin/Admin
+        return $this->is_active && ($this->isOwner() || $this->isSuperAdmin() || $this->isAdmin());
     }
 
     public function store(): BelongsTo
@@ -88,6 +88,11 @@ class User extends Authenticatable implements FilamentUser
     public function isSuperAdmin(): bool
     {
         return $this->role === UserRole::SuperAdmin;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
     }
 
     public function isPharmacist(): bool

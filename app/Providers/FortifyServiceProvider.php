@@ -50,6 +50,7 @@ class FortifyServiceProvider extends ServiceProvider
                 $allowedRoles = [
                     UserRole::SuperAdmin,
                     UserRole::Owner,
+                    UserRole::Admin,
                     UserRole::Pharmacist,
                     UserRole::Assistant,
                     UserRole::Cashier,

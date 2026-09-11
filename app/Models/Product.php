@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BatchStatus;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -102,7 +103,20 @@ class Product extends Model
 
     public function getTotalStockAttribute(): int
     {
-        return $this->batches()->where('status', 'active')->sum('stock');
+        // Prefer an eager-loaded aggregate/relation to avoid a per-row query on list pages.
+        if (array_key_exists('batches_sum_stock', $this->attributes)) {
+            return (int) $this->attributes['batches_sum_stock'];
+        }
+
+        if ($this->relationLoaded('activeBatches')) {
+            return (int) $this->activeBatches->sum('stock');
+        }
+
+        if ($this->relationLoaded('batches')) {
+            return (int) $this->batches->where('status', BatchStatus::Active)->sum('stock');
+        }
+
+        return (int) $this->batches()->where('status', 'active')->sum('stock');
     }
 
     public function isLowStock(): bool

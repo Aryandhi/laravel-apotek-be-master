@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class ProductBatch extends Model
 {
@@ -143,6 +144,21 @@ class ProductBatch extends Model
             'active' => $activeCount,
             'total_updated' => $expiredCount + $nearExpiredCount + $activeCount,
         ];
+    }
+
+    /**
+     * Throttled variant of syncExpiryStatuses() for use on hot request paths (page loads,
+     * API calls). The bulk UPDATEs are already covered by a daily scheduled command; this
+     * just guards against stale statuses within the cache window without re-running the
+     * update on every single request.
+     */
+    public static function syncExpiryStatusesIfDue(?int $nearExpiredDays = null): void
+    {
+        Cache::remember('product_batches_expiry_synced_at', now()->addMinutes(15), function () use ($nearExpiredDays) {
+            static::syncExpiryStatuses($nearExpiredDays);
+
+            return true;
+        });
     }
 
     public function scopeActive($query)

@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -60,6 +61,12 @@ class PurchaseReturnResource extends Resource
     public static function table(Table $table): Table
     {
         return PurchaseReturnsTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['purchase', 'supplier', 'user']);
     }
 
     public static function getRelations(): array

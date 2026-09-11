@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $user = $request->user();
         $today = today();
 
-        ProductBatch::syncExpiryStatuses();
+        ProductBatch::syncExpiryStatusesIfDue();
 
         $todaySales = Sale::whereDate('date', $today)
             ->where('status', 'completed')
@@ -24,7 +24,8 @@ class DashboardController extends Controller
             ->first();
 
         $lowStockProducts = Product::active()
-            ->get()
+            ->withSum(['batches as batches_sum_stock' => fn ($q) => $q->where('status', 'active')], 'stock')
+            ->get(['id', 'min_stock'])
             ->filter(fn ($product) => $product->isLowStock())
             ->count();
 
@@ -64,6 +65,7 @@ class DashboardController extends Controller
     {
         $products = Product::active()
             ->with(['category', 'baseUnit'])
+            ->withSum(['batches as batches_sum_stock' => fn ($q) => $q->where('status', 'active')], 'stock')
             ->get()
             ->filter(fn ($product) => $product->isLowStock())
             ->take(20)
@@ -87,7 +89,7 @@ class DashboardController extends Controller
     {
         $today = today();
 
-        ProductBatch::syncExpiryStatuses();
+        ProductBatch::syncExpiryStatusesIfDue();
 
         $batches = ProductBatch::with(['product.baseUnit'])
             ->whereIn('status', ['active', 'near_expired', 'expired'])

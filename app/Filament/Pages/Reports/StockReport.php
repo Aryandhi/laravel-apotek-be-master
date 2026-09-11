@@ -79,7 +79,7 @@ class StockReport extends BaseReport
 
     protected function getReportQuery(): Builder
     {
-        ProductBatch::syncExpiryStatuses();
+        ProductBatch::syncExpiryStatusesIfDue();
 
         return ProductBatch::query()
             ->with(['product', 'product.category', 'product.baseUnit', 'supplier'])

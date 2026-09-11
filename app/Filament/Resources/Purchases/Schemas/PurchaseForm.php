@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Purchase;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Services\BatchPricingSyncService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -104,8 +105,19 @@ class PurchaseForm
                         Repeater::make('items')
                             ->label('')
                             ->relationship()
+                            ->afterStateHydrated(function ($state, Set $set) {
+                                if (! is_array($state)) {
+                                    return;
+                                }
+
+                                foreach ($state as $key => $row) {
+                                    $state[$key]['original_quantity'] = (int) ($row['quantity'] ?? 0);
+                                }
+
+                                $set('items', $state);
+                            })
                             ->schema([
-                                Grid::make(6)
+                                Grid::make(7)
                                     ->schema([
                                         Select::make('product_id')
                                             ->label('Produk')
@@ -169,8 +181,17 @@ class PurchaseForm
                                             ->required()
                                             ->default(null)
                                             ->minValue(fn (Get $get): int => filled($get('purchase_order_item_id')) ? 0 : 1)
+                                            ->maxValue(fn (Get $get): ?int => self::remainingOrderableQuantity($get))
+                                            ->validationMessages([
+                                                'max' => 'Qty melebihi sisa Surat Pesanan (maks. :max).',
+                                            ])
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Set $set, Get $get) => self::calculateItemTotal($set, $get))
+                                            ->columnSpan(1),
+                                        Placeholder::make('remaining_quantity_display')
+                                            ->label('Sisa SP')
+                                            ->content(fn (Get $get): string => self::describeRemainingQuantity($get))
+                                            ->visible(fn (Get $get): bool => filled($get('purchase_order_item_id')))
                                             ->columnSpan(1),
                                         Select::make('unit_id')
                                             ->label('Satuan')
@@ -279,6 +300,9 @@ class PurchaseForm
                                     ->default(0),
                                 Hidden::make('purchase_order_item_id')
                                     ->default(null),
+                                Hidden::make('original_quantity')
+                                    ->default(0)
+                                    ->dehydrated(false),
                                 Hidden::make('is_manual_selling_price')
                                     ->default(false)
                                     ->dehydrated(false),
@@ -477,6 +501,51 @@ class PurchaseForm
 
         $set('items', $rows);
         self::calculateTotals($set, $get);
+    }
+
+    /**
+     * Max quantity this repeater row may carry, so backorder invoices cannot over-receive
+     * a Surat Pesanan item. Adds back this row's own original (already-persisted) quantity
+     * so editing an existing item doesn't double count itself against the PO's remaining qty.
+     */
+    private static function remainingOrderableQuantity(Get $get): ?int
+    {
+        $orderItemId = $get('purchase_order_item_id');
+
+        if (! filled($orderItemId)) {
+            return null;
+        }
+
+        $orderItem = PurchaseOrderItem::query()->find($orderItemId);
+
+        if (! $orderItem) {
+            return null;
+        }
+
+        $originalQuantity = (int) ($get('original_quantity') ?? 0);
+
+        return max(0, $orderItem->quantity - $orderItem->received_quantity + $originalQuantity);
+    }
+
+    private static function describeRemainingQuantity(Get $get): string
+    {
+        $orderItemId = $get('purchase_order_item_id');
+
+        if (! filled($orderItemId)) {
+            return '-';
+        }
+
+        $orderItem = PurchaseOrderItem::query()->find($orderItemId);
+
+        if (! $orderItem) {
+            return '-';
+        }
+
+        $originalQuantity = (int) ($get('original_quantity') ?? 0);
+        $receivedElsewhere = max(0, $orderItem->received_quantity - $originalQuantity);
+        $availableForThisRow = max(0, $orderItem->quantity - $receivedElsewhere);
+
+        return "Sudah diterima: {$receivedElsewhere} dari {$orderItem->quantity} (sisa {$availableForThisRow})";
     }
 
     private static function calculateTotals(Set $set, Get $get): void

@@ -4,30 +4,48 @@ namespace App\Observers;
 
 use App\Enums\PurchaseOrderStatus;
 use App\Models\PurchaseItem;
+use App\Models\PurchaseOrderItem;
 
 /**
  * Keeps Surat Pesanan (PurchaseOrder) item received quantities & status in sync
- * whenever an invoice item referencing it is created or removed.
+ * whenever an invoice item referencing it is created, edited or removed.
  */
 class PurchaseItemObserver
 {
     public function created(PurchaseItem $item): void
     {
         if ($item->purchase_order_item_id) {
-            $this->syncPurchaseOrder($item);
+            $this->syncPurchaseOrderItem((int) $item->purchase_order_item_id);
+        }
+    }
+
+    public function updated(PurchaseItem $item): void
+    {
+        if (! $item->wasChanged('quantity') && ! $item->wasChanged('purchase_order_item_id')) {
+            return;
+        }
+
+        if ($item->purchase_order_item_id) {
+            $this->syncPurchaseOrderItem((int) $item->purchase_order_item_id);
+        }
+
+        $previousOrderItemId = $item->getOriginal('purchase_order_item_id');
+
+        if ($previousOrderItemId && (int) $previousOrderItemId !== (int) $item->purchase_order_item_id) {
+            $this->syncPurchaseOrderItem((int) $previousOrderItemId);
         }
     }
 
     public function deleted(PurchaseItem $item): void
     {
         if ($item->purchase_order_item_id) {
-            $this->syncPurchaseOrder($item);
+            $this->syncPurchaseOrderItem((int) $item->purchase_order_item_id);
         }
     }
 
-    private function syncPurchaseOrder(PurchaseItem $item): void
+    private function syncPurchaseOrderItem(int $orderItemId): void
     {
-        $orderItem = $item->purchaseOrderItem()->first();
+        $orderItem = PurchaseOrderItem::query()->find($orderItemId);
 
         if (! $orderItem) {
             return;

@@ -16,13 +16,22 @@ class SalesChart extends ChartWidget
 
     protected function getData(): array
     {
+        $start = now()->subDays(6)->startOfDay();
+        $end = now()->endOfDay();
+
+        $salesByDate = Sale::query()
+            ->selectRaw('DATE(date) as sale_date, SUM(total) as total')
+            ->whereBetween('date', [$start, $end])
+            ->groupBy('sale_date')
+            ->pluck('total', 'sale_date');
+
         $data = [];
         $labels = [];
 
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $labels[] = $date->translatedFormat('D, d M');
-            $data[] = Sale::whereDate('date', $date)->sum('total');
+            $data[] = (float) ($salesByDate[$date->format('Y-m-d')] ?? 0);
         }
 
         return [

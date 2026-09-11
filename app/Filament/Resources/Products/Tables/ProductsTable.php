@@ -56,14 +56,11 @@ class ProductsTable
                     ->sortable(),
                 TextColumn::make('total_stock')
                     ->label('Stok')
-                    ->getStateUsing(fn ($record) => $record->total_stock)
+                    ->state(fn ($record) => (int) ($record->batches_sum_stock ?? $record->total_stock))
                     ->badge()
                     ->color(fn ($record) => $record->isLowStock() ? 'danger' : 'success')
                     ->alignCenter()
-                    ->sortable(query: function ($query, string $direction) {
-                        return $query->withSum(['batches' => fn ($q) => $q->where('status', 'active')], 'stock')
-                            ->orderBy('batches_sum_stock', $direction);
-                    }),
+                    ->sortable(query: fn ($query, string $direction) => $query->orderBy('batches_sum_stock', $direction)),
                 TextColumn::make('baseUnit.name')
                     ->label('Satuan')
                     ->searchable()

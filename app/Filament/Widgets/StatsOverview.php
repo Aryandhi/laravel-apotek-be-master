@@ -15,20 +15,26 @@ class StatsOverview extends StatsOverviewWidget
     protected function getStats(): array
     {
         $today = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
         $thisMonth = now()->startOfMonth();
         $lastMonth = now()->subMonth()->startOfMonth();
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
-        // Penjualan hari ini
-        $todaySales = Sale::whereDate('date', $today)->sum('total');
-        $todayTransactions = Sale::whereDate('date', $today)->count();
+        // Single aggregate query instead of 5 separate SUM/COUNT queries.
+        $salesStats = Sale::query()->selectRaw(
+            'COALESCE(SUM(CASE WHEN date >= ? AND date <= ? THEN total ELSE 0 END), 0) as today_sales,
+             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as today_transactions,
+             COALESCE(SUM(CASE WHEN date >= ? THEN total ELSE 0 END), 0) as month_sales,
+             COUNT(CASE WHEN date >= ? THEN 1 END) as month_transactions,
+             COALESCE(SUM(CASE WHEN date >= ? AND date <= ? THEN total ELSE 0 END), 0) as last_month_sales',
+            [$today, $todayEnd, $today, $todayEnd, $thisMonth, $thisMonth, $lastMonth, $lastMonthEnd]
+        )->first();
 
-        // Penjualan bulan ini
-        $monthSales = Sale::where('date', '>=', $thisMonth)->sum('total');
-        $monthTransactions = Sale::where('date', '>=', $thisMonth)->count();
-
-        // Penjualan bulan lalu (untuk perbandingan)
-        $lastMonthSales = Sale::whereBetween('date', [$lastMonth, $lastMonthEnd])->sum('total');
+        $todaySales = (float) $salesStats->today_sales;
+        $todayTransactions = (int) $salesStats->today_transactions;
+        $monthSales = (float) $salesStats->month_sales;
+        $monthTransactions = (int) $salesStats->month_transactions;
+        $lastMonthSales = (float) $salesStats->last_month_sales;
 
         // Persentase perubahan
         $salesChange = $lastMonthSales > 0

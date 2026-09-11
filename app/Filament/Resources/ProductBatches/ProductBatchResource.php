@@ -66,9 +66,10 @@ class ProductBatchResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        ProductBatch::syncExpiryStatuses();
+        ProductBatch::syncExpiryStatusesIfDue();
 
-        return parent::getEloquentQuery();
+        return parent::getEloquentQuery()
+            ->with(['product.baseUnit', 'supplier']);
     }
 
     public static function getRelations(): array

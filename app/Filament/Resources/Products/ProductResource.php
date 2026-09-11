@@ -75,6 +75,13 @@ class ProductResource extends Resource
         return ProductsTable::configure($table);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['category', 'baseUnit'])
+            ->withSum(['batches as batches_sum_stock' => fn (Builder $query) => $query->where('status', 'active')], 'stock');
+    }
+
     public static function getRelations(): array
     {
         return [

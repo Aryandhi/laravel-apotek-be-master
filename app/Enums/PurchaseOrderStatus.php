@@ -37,7 +37,7 @@ enum PurchaseOrderStatus: string
 
     public function isEditable(): bool
     {
-        return $this === self::Draft;
+        return in_array($this, [self::Draft, self::Approval], true);
     }
 
     public function isDeletable(): bool

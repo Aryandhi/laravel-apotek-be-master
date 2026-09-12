@@ -6,6 +6,7 @@ use App\Enums\PurchaseReturnStatus;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Purchase;
+use App\Models\PurchaseItem;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -66,8 +67,9 @@ class PurchaseReturnForm
                                         ->toArray()
                                     )
                                     ->searchable()
+                                    ->live()
                                     ->placeholder('Pilih pembelian (opsional)')
-                                    ->helperText('Pilih jika retur terkait pembelian tertentu'),
+                                    ->helperText('Pilih jika retur terkait pembelian tertentu. Daftar barang hanya akan menampilkan produk dari faktur ini.'),
                             ]),
                     ]),
 
@@ -83,15 +85,27 @@ class PurchaseReturnForm
                                     ->schema([
                                         Select::make('product_id')
                                             ->label('Produk')
-                                            ->options(fn () => Product::query()
-                                                ->where('is_active', true)
-                                                ->orderBy('name')
-                                                ->get()
-                                                ->mapWithKeys(fn ($product) => [
-                                                    $product->id => "{$product->name} ({$product->code})",
-                                                ])
-                                                ->toArray()
-                                            )
+                                            ->options(function (Get $get) {
+                                                $purchaseId = $get('../../purchase_id');
+
+                                                $query = Product::query()->orderBy('name');
+
+                                                if ($purchaseId) {
+                                                    $query->whereIn('id', PurchaseItem::query()
+                                                        ->where('purchase_id', $purchaseId)
+                                                        ->distinct()
+                                                        ->pluck('product_id')
+                                                    );
+                                                } else {
+                                                    $query->where('is_active', true);
+                                                }
+
+                                                return $query->get()
+                                                    ->mapWithKeys(fn ($product) => [
+                                                        $product->id => "{$product->name} ({$product->code})",
+                                                    ])
+                                                    ->toArray();
+                                            })
                                             ->searchable()
                                             ->required()
                                             ->reactive()

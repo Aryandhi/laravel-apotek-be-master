@@ -119,11 +119,11 @@
                     <div class="relative transform translate-y-8 lg:translate-y-16">
                         <!-- Tablet Mockup - Hidden on mobile, shown on lg+ -->
                         <div class="tablet-mockup hidden lg:block bg-gray-900 rounded-3xl p-2 shadow-2xl transform rotate-2">
-                            <img src="/images/tablet-2.jpeg" alt="Apotek POS Tablet View" class="rounded-2xl w-full">
+                            <img src="/images/tablet-2.jpeg" alt="Apotek POS Tablet View" class="rounded-2xl w-full" width="1280" height="800" fetchpriority="high">
                         </div>
                         <!-- Phone Mockup - Positioned absolute on lg+, static on mobile -->
                         <div class="phone-mockup lg:absolute lg:-bottom-10 lg:-left-16 bg-gray-900 rounded-3xl p-1.5 shadow-2xl transform lg:-rotate-6 max-w-[220px] mx-auto lg:max-w-none">
-                            <img src="/images/phone-1.jpeg" alt="Apotek POS Phone View" class="rounded-2xl w-full">
+                            <img src="/images/phone-1.jpeg" alt="Apotek POS Phone View" class="rounded-2xl w-full" width="572" height="1280" fetchpriority="high">
                         </div>
                     </div>
                 </div>
@@ -298,7 +298,7 @@
                     @for ($i = 1; $i <= 13; $i++)
                     <div class="flex-shrink-0">
                         <div class="bg-gray-900 rounded-3xl p-1.5 shadow-xl">
-                            <img src="/images/phone-{{ $i }}.jpeg" alt="Phone Screenshot {{ $i }}" class="rounded-2xl h-96 w-auto">
+                            <img src="/images/phone-{{ $i }}.jpeg" alt="Phone Screenshot {{ $i }}" class="rounded-2xl h-96 w-auto" width="572" height="1280" loading="lazy" decoding="async">
                         </div>
                     </div>
                     @endfor
@@ -317,7 +317,7 @@
                     @for ($i = 1; $i <= 10; $i++)
                     <div class="flex-shrink-0">
                         <div class="bg-gray-900 rounded-3xl p-2 shadow-xl">
-                            <img src="/images/tablet-{{ $i }}.jpeg" alt="Tablet Screenshot {{ $i }}" class="rounded-2xl h-80 w-auto">
+                            <img src="/images/tablet-{{ $i }}.jpeg" alt="Tablet Screenshot {{ $i }}" class="rounded-2xl h-80 w-auto" width="1280" height="800" loading="lazy" decoding="async">
                         </div>
                     </div>
                     @endfor

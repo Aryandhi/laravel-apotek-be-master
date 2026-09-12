@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Enums\SuperAdminRole;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -17,6 +18,7 @@ class UserSeeder extends Seeder
     {
         return match ($role) {
             UserRole::Owner => 'Owner',
+            UserRole::SuperAdmin => 'Super Admin',
             UserRole::Admin => 'Admin',
             UserRole::Pharmacist => 'Apoteker',
             UserRole::Assistant => 'Asisten',
@@ -33,6 +35,15 @@ class UserSeeder extends Seeder
         $store = Store::first();
 
         $users = [
+            [
+                'name' => 'Aryandhi Arief',
+                'email' => 'aryandhi.win@apotek.com',
+                'password' => Hash::make('w1npreneur'),
+                'role' => UserRole::SuperAdmin,
+                'phone' => '085377745621',
+                'is_active' => true,
+                'store_id' => $store?->id,
+            ],
             [
                 'name' => 'Admin Owner',
                 'email' => 'owner@apotek.com',

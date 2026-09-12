@@ -54,6 +54,34 @@ class CategorySeeder extends Seeder
                 'requires_prescription' => false,
                 'is_narcotic' => false,
             ],
+            [
+                'name' => 'Obat Nyeri',
+                'type' => CategoryTypeEnum::ObatBebas,
+                'category_type_code' => 'obat_bebas',
+                'requires_prescription' => false,
+                'is_narcotic' => false,
+            ],
+            [
+                'name' => 'Obat Kulit',
+                'type' => CategoryTypeEnum::ObatBebas,
+                'category_type_code' => 'obat_bebas',
+                'requires_prescription' => false,
+                'is_narcotic' => false,
+            ],
+            [
+                'name' => 'Salep Kulit',
+                'type' => CategoryTypeEnum::ObatBebas,
+                'category_type_code' => 'obat_bebas',
+                'requires_prescription' => false,
+                'is_narcotic' => false,
+            ],
+            [
+                'name' => 'Obat Merah (P3K)',
+                'type' => CategoryTypeEnum::ObatBebas,
+                'category_type_code' => 'obat_bebas',
+                'requires_prescription' => false,
+                'is_narcotic' => false,
+            ],
 
             // Obat Bebas Terbatas (Biru)
             [
@@ -101,6 +129,13 @@ class CategorySeeder extends Seeder
                 'is_narcotic' => false,
             ],
             [
+                'name' => 'Antiinflamasi',
+                'type' => CategoryTypeEnum::ObatKeras,
+                'category_type_code' => 'obat_keras',
+                'requires_prescription' => true,
+                'is_narcotic' => false,
+            ],
+            [
                 'name' => 'Antidiabetes',
                 'type' => CategoryTypeEnum::ObatKeras,
                 'category_type_code' => 'obat_keras',
@@ -130,6 +165,20 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'Obat Injeksi',
+                'type' => CategoryTypeEnum::ObatKeras,
+                'category_type_code' => 'obat_keras',
+                'requires_prescription' => true,
+                'is_narcotic' => false,
+            ],
+            [
+                'name' => 'Obat Lambung',
+                'type' => CategoryTypeEnum::ObatKeras,
+                'category_type_code' => 'obat_keras',
+                'requires_prescription' => true,
+                'is_narcotic' => false,
+            ],
+            [
+                'name' => 'Salep Kulit Jamur/Mikroba',
                 'type' => CategoryTypeEnum::ObatKeras,
                 'category_type_code' => 'obat_keras',
                 'requires_prescription' => true,
